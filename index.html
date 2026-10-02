@@ -385,6 +385,8 @@
     .roadmap .eyebrow { display: block; margin-top: 14px; color: var(--faint); }
     .roadmap h3 { margin-top: 4px; font-size: 15px; font-weight: 700; line-height: 1.35; }
     .roadmap p { margin-top: 4px; font-size: 13px; color: var(--muted); }
+    .deadline { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; font-weight: 600; }
+    .deadline svg { color: var(--primary); }
     .badge { display: inline-block; margin-top: 10px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
     .done .badge { color: var(--ok); background: var(--ok-soft); }
     .next .badge { color: var(--live-ink); background: var(--live); }
@@ -488,11 +490,12 @@
       ],
 
       // status: "done" (hoàn thành) | "next" (đang thực hiện) | "todo" (sắp tới)
+      // deadline: ngày hạn nộp, để trống ("") thì trang sẽ ẩn dòng này
       roadmap: [
-        { code: "A.P1", week: "Tuần 38", title: "Landing page", text: "Tạo trang giới thiệu bài tập lớn.", status: "done" },
-        { code: "A.P2", week: "Tuần 41", title: "Chọn dataset + 30% EDA", text: "Chốt bộ dữ liệu và phân tích bước đầu.", status: "next" },
-        { code: "A.P3", week: "Tuần 44", title: "Hoàn thành EDA", text: "Hoàn thiện phân tích và trực quan hóa.", status: "todo" },
-        { code: "A.P4", week: "Tuần 46", title: "Machine Learning", text: "Hoàn thành mô hình và toàn bộ project.", status: "todo" },
+        { code: "A.P1", week: "Tuần 38", deadline: "19/09/2026", title: "Landing page", text: "Tạo trang giới thiệu bài tập lớn.", status: "done" },
+        { code: "A.P2", week: "Tuần 41", deadline: "10/10/2026", title: "Chọn dataset + 30% EDA", text: "Chốt bộ dữ liệu và phân tích bước đầu.", status: "next" },
+        { code: "A.P3", week: "Tuần 44", deadline: "31/10/2026", title: "Hoàn thành EDA", text: "Hoàn thiện phân tích và trực quan hóa.", status: "todo" },
+        { code: "A.P4", week: "Tuần 46", deadline: "14/11/2026", title: "Machine Learning", text: "Hoàn thành mô hình và toàn bộ project.", status: "todo" },
       ],
 
       tools: ["Python", "NumPy", "PyTorch", "Matplotlib", "Seaborn", "Plotly"],
@@ -508,6 +511,7 @@
       tools: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg>',
       route: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
       arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>',
+      calendar: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
       check: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
       school: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 9 9.5-5 9.5 5-9.5 5z"/><path d="M6.5 11.5V16c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.200v-4.500M21.5 9v5.5"/></svg>',
       sun: '<svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.500v2M2.5 12h2M19.5 12h2M5.3 5.300l1.4 1.400M17.3 17.300l1.4 1.400M5.3 18.700l1.4-1.400M17.3 6.700l1.4-1.4"/></svg>',
@@ -679,6 +683,7 @@
                     <span class="eyebrow">${esc(r.code)} · ${esc(r.week)}</span>
                     <h3>${esc(r.title)}</h3>
                     <p>${esc(r.text)}</p>
+                    ${r.deadline ? `<div class="deadline">${ICONS.calendar} Hạn nộp: ${esc(r.deadline)}</div>` : ""}
                     <span class="badge">${BADGE[r.status]}</span>
                   </li>`).join("")}
               </ol>
