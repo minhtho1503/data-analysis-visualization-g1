@@ -360,6 +360,7 @@
     /* ---------- Lộ trình ---------- */
     .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
     .section-head p { font-size: 13.5px; color: var(--muted); }
+    .roadmap-card { margin-top: 24px; }
     .roadmap { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 26px 0 0; padding: 0; }
     .roadmap li { position: relative; display: grid; grid-row: span 6; grid-template-rows: subgrid; padding: 0 16px 0 0; }
     .roadmap .node, .roadmap .badge { justify-self: start; }
@@ -397,6 +398,14 @@
     footer { margin-top: 48px; padding: 24px 0 32px; border-top: 1px solid var(--border); font-size: 13px; color: var(--faint); text-align: center; }
 
     /* ---------- Responsive ---------- */
+    @media (max-width: 1179px) {
+      .roadmap { grid-template-columns: 1fr; gap: 0; }
+      .roadmap li { display: block; padding: 0 0 22px 34px; }
+      .roadmap li:last-child { padding-bottom: 0; }
+      .roadmap li::before { top: 20px; bottom: 0; left: 9px; right: auto; width: 2px; height: auto; }
+      .roadmap .node { position: absolute; left: 0; top: 0; }
+      .roadmap .eyebrow { margin-top: 0; }
+    }
     @media (max-width: 980px) {
       .hero-body { grid-template-columns: 1fr; }
       .hero-art { display: none; }
@@ -411,12 +420,6 @@
       .hero-meta > div + div { padding-left: 0; border-left: 0; }
       .card-pad, .panel { padding: 20px; }
       .steps { grid-template-columns: 1fr; }
-      .roadmap { grid-template-columns: 1fr; gap: 0; }
-      .roadmap li { display: block; padding: 0 0 22px 34px; }
-      .roadmap li:last-child { padding-bottom: 0; }
-      .roadmap li::before { top: 20px; bottom: 0; left: 9px; right: auto; width: 2px; height: auto; }
-      .roadmap .node { position: absolute; left: 0; top: 0; }
-      .roadmap .eyebrow { margin-top: 0; }
     }
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; scroll-behavior: auto !important; }
@@ -657,11 +660,6 @@
                 <div class="eyebrow label">Mã nguồn nhóm</div>
                 <a class="btn" href="${esc(repoUrl)}" ${ext}>${ICONS.github} ${team.repoUrl ? "GitHub Repository" : "GitHub"}</a>` : ""}
             </div>
-
-            <div class="card card-pad">
-              <h2 class="card-title">${ICONS.tools} Công cụ sử dụng</h2>
-              <div class="chips" style="margin-top:14px">${tools.map((t) => `<span class="chip plain">${esc(t)}</span>`).join("")}</div>
-            </div>
           </aside>
 
           <div class="stack">
@@ -673,23 +671,28 @@
             </div>
 
             <div class="card card-pad">
-              <div class="section-head">
-                <h2 class="card-title">${ICONS.route} Lộ trình bài tập lớn</h2>
-                <p>A1 · Exploratory Data Analysis &nbsp;→&nbsp; A2 · Classification / Regression</p>
-              </div>
-              <ol class="roadmap">
-                ${roadmap.map((r) => `
-                  <li class="${r.status}">
-                    <span class="node">${r.status === "done" ? ICONS.check : ""}</span>
-                    <span class="eyebrow">${esc(r.code)} · ${esc(r.week)}</span>
-                    <h3>${esc(r.title)}</h3>
-                    <p>${esc(r.text)}</p>
-                    ${r.deadline ? `<div class="deadline">${ICONS.calendar} Hạn nộp: ${esc(r.deadline)}</div>` : ""}
-                    <span class="badge">${BADGE[r.status]}</span>
-                  </li>`).join("")}
-              </ol>
+              <h2 class="card-title">${ICONS.tools} Công cụ sử dụng</h2>
+              <div class="chips" style="margin-top:14px">${tools.map((t) => `<span class="chip plain">${esc(t)}</span>`).join("")}</div>
             </div>
           </div>
+        </div>
+
+        <div class="card card-pad roadmap-card">
+          <div class="section-head">
+            <h2 class="card-title">${ICONS.route} Lộ trình bài tập lớn</h2>
+            <p>A1 · Exploratory Data Analysis &nbsp;→&nbsp; A2 · Classification / Regression</p>
+          </div>
+          <ol class="roadmap">
+            ${roadmap.map((r) => `
+              <li class="${r.status}">
+                <span class="node">${r.status === "done" ? ICONS.check : ""}</span>
+                <span class="eyebrow">${esc(r.code)} · ${esc(r.week)}</span>
+                <h3>${esc(r.title)}</h3>
+                <p>${esc(r.text)}</p>
+                ${r.deadline ? `<div class="deadline">${ICONS.calendar} Hạn nộp: ${esc(r.deadline)}</div>` : ""}
+                <span class="badge">${BADGE[r.status]}</span>
+              </li>`).join("")}
+          </ol>
         </div>
       </main>
 
