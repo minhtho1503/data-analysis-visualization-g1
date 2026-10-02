@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bài tập lớn CO5177 – Phân tích và trực quan dữ liệu</title>
+  <meta name="description" content="Landing page bài tập lớn môn Nền tảng lập trình cho phân tích và trực quan dữ liệu (CO5177) – Học kỳ 261, Đại học Bách Khoa – ĐHQG-HCM.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2336896d'/%3E%3Cpath d='M8 22v-6m5.3 6V10m5.4 12v-9M24 22v-4' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- Bảng màu ---------- */
+    :root {
+      --bg: #f6fbf9;
+      --surface: #ffffff;
+      --surface-2: #f2faf6;
+      --border: #d9eee5;
+      --text: #172b25;
+      --muted: #566b62;
+      --faint: #84978f;
+      --primary: #2c7f63;
+      --primary-soft: #e4f5ee;
+      --grad: linear-gradient(135deg, #56bf9a, #36896d);
+      --grad-text: linear-gradient(92deg, #2c7f63, #4fb892);
+      --hero: linear-gradient(135deg, #eaf8f2, #dcf2e9);
+      --glow: rgba(86, 191, 154, .34);
+      --dots: rgba(44, 127, 99, .2);
+      --tabular: #2c7f63;
+      --tabular-soft: #e4f5ee;
+      --text-c: #4f46e5;
+      --text-c-soft: #eceafe;
+      --image: #c2570c;
+      --image-soft: #fff0e0;
+      --ok: #2c7f63;
+      --ok-soft: #e4f5ee;
+      --live: #fcd34d;
+      --live-ink: #4a3600;
+      --shadow: 0 1px 2px rgba(23, 43, 37, .04), 0 14px 36px -14px rgba(23, 43, 37, .18);
+      --radius: 18px;
+      --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0a1411;
+        --surface: #101d19;
+        --surface-2: #152620;
+        --border: #213a31;
+        --text: #e7f3ee;
+        --muted: #9eb5ab;
+        --faint: #6f877d;
+        --primary: #6fd6b0;
+        --primary-soft: #143024;
+        --grad: linear-gradient(135deg, #4fb892, #2f7d63);
+        --grad-text: linear-gradient(92deg, #6fd6b0, #a7ecd2);
+        --hero: linear-gradient(135deg, #0d1c17, #12281f);
+        --glow: rgba(86, 191, 154, .2);
+        --dots: rgba(111, 214, 176, .14);
+        --tabular: #6fd6b0;
+        --tabular-soft: #143024;
+        --text-c: #b3b0ff;
+        --text-c-soft: #22224c;
+        --image: #fdba74;
+        --image-soft: #3a2513;
+        --ok: #6fd6b0;
+        --ok-soft: #143024;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 14px 36px -14px rgba(0, 0, 0, .6);
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0a1411;
+      --surface: #101d19;
+      --surface-2: #152620;
+      --border: #213a31;
+      --text: #e7f3ee;
+      --muted: #9eb5ab;
+      --faint: #6f877d;
+      --primary: #6fd6b0;
+      --primary-soft: #143024;
+      --grad: linear-gradient(135deg, #4fb892, #2f7d63);
+      --grad-text: linear-gradient(92deg, #6fd6b0, #a7ecd2);
+      --hero: linear-gradient(135deg, #0d1c17, #12281f);
+      --glow: rgba(86, 191, 154, .2);
+      --dots: rgba(111, 214, 176, .14);
+      --tabular: #6fd6b0;
+      --tabular-soft: #143024;
+      --text-c: #b3b0ff;
+      --text-c-soft: #22224c;
+      --image: #fdba74;
+      --image-soft: #3a2513;
+      --ok: #6fd6b0;
+      --ok-soft: #143024;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 14px 36px -14px rgba(0, 0, 0, .6);
+    }
+
+    /* ---------- Nền tảng ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, p { margin: 0; }
+    a { color: inherit; text-decoration: none; }
+    svg { flex-shrink: 0; }
+    .container { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
+
+    [data-topic="tabular"] { --accent: var(--tabular); --accent-soft: var(--tabular-soft); }
+    [data-topic="text"]    { --accent: var(--text-c);  --accent-soft: var(--text-c-soft); }
+    [data-topic="image"]   { --accent: var(--image);   --accent-soft: var(--image-soft); }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(900px 520px at 88% -12%, var(--glow), transparent 62%),
+        radial-gradient(720px 440px at -4% 112%, var(--glow), transparent 60%),
+        var(--hero);
+      border-bottom: 1px solid var(--border);
+      padding: 22px 0 112px;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(var(--dots) 1px, transparent 1px);
+      background-size: 22px 22px;
+      -webkit-mask-image: linear-gradient(105deg, transparent 30%, #000 100%);
+      mask-image: linear-gradient(105deg, transparent 30%, #000 100%);
+      pointer-events: none;
+    }
+    .hero > .container { position: relative; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .school { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .school-mark {
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      border-radius: 11px;
+      color: #fff;
+      background: var(--grad);
+    }
+    .school-name { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+    .school-dept { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12.5px; font-weight: 600;
+      white-space: nowrap;
+      color: var(--primary);
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+    .icon-btn {
+      display: grid; place-items: center;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      color: var(--primary);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .icon-btn:hover { background: var(--primary-soft); }
+    .icon-btn .moon { display: none; }
+    :root[data-theme="dark"] .icon-btn .sun { display: none; }
+    :root[data-theme="dark"] .icon-btn .moon { display: block; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .icon-btn .sun { display: none; }
+      :root:not([data-theme="light"]) .icon-btn .moon { display: block; }
+    }
+
+    .hero-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      align-items: center;
+      gap: 40px;
+      margin-top: 56px;
+    }
+    .hero .eyebrow { color: var(--primary); }
+    .hero h1 {
+      margin-top: 14px;
+      font-size: clamp(28px, 4.3vw, 46px);
+      font-weight: 800;
+      line-height: 1.16;
+      letter-spacing: -.02em;
+      text-wrap: balance;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: var(--grad-text);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .lede { margin-top: 18px; max-width: 56ch; font-size: 16px; color: var(--muted); }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 30px; }
+    .hero-meta dt { font-size: 12px; color: var(--muted); }
+    .hero-meta dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; }
+    .hero-meta > div + div { padding-left: 28px; border-left: 1px solid color-mix(in srgb, var(--primary) 26%, transparent); }
+    .hero-art { width: 100%; height: auto; filter: drop-shadow(0 22px 34px rgba(23, 43, 37, .2)); }
+    .a-card { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+    .a-cell { fill: var(--border); }
+    .a-head { fill: #56bf9a; }
+    .a-token { fill: #818cf8; }
+
+    /* ---------- Bố cục chính ---------- */
+    .layout {
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr);
+      align-items: start;
+      gap: 24px;
+      margin-top: -64px;
+      position: relative;
+    }
+    .stack { display: grid; gap: 24px; min-width: 0; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .card-pad { padding: 24px; }
+    .card-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; }
+    .card-title svg { color: var(--primary); }
+    .label { color: var(--faint); }
+
+    /* ---------- Sidebar: nhóm ---------- */
+    .team-name { margin-top: 4px; font-size: 20px; font-weight: 800; letter-spacing: -.01em; color: var(--primary); }
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+    .members { display: grid; gap: 12px; margin-top: 12px; }
+    .member { padding: 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; }
+    .member-head { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      display: grid; place-items: center;
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 14px; font-weight: 700; letter-spacing: .02em;
+    }
+    .member:nth-child(odd) .avatar  { background: linear-gradient(135deg, #56bf9a, #36896d); }
+    .member:nth-child(even) .avatar { background: linear-gradient(135deg, #818cf8, #4f46e5); }
+    .member-name { font-weight: 700; line-height: 1.3; }
+    .member-id { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+    .member-role { margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      color: var(--accent, var(--muted));
+      background: var(--accent-soft, var(--surface-2));
+    }
+    .chip.plain { border: 1px solid var(--border); font-weight: 500; }
+    .link {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 12px;
+      font-size: 13px; font-weight: 600;
+      color: var(--primary);
+    }
+    .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      width: 100%;
+      margin-top: 10px;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      color: #fff;
+      background: var(--grad);
+      border: 1px solid transparent;
+      box-shadow: 0 10px 20px -12px rgba(54, 137, 109, .8);
+      transition: transform .15s, box-shadow .2s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 24px -12px rgba(54, 137, 109, .9); }
+
+    /* ---------- Tabs ---------- */
+    .tabs {
+      display: flex; gap: 6px;
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 10px 16px;
+      border: 0; border-radius: 12px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit; font-size: 14px; font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background .2s, color .2s;
+    }
+    .tab:hover { background: var(--surface-2); color: var(--text); }
+    .tab[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+
+    .panel { padding: 28px; }
+    .panel[hidden] { display: none; }
+    .panel-head { display: flex; align-items: flex-start; gap: 16px; }
+    .panel-icon {
+      display: grid; place-items: center;
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .panel-head h2 { font-size: 22px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; }
+    .panel-head p { margin-top: 4px; color: var(--muted); }
+    .owners { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 18px; font-size: 13px; color: var(--muted); }
+    .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 24px; }
+    .step {
+      display: flex; flex-direction: column;
+      padding: 18px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      transition: border-color .2s, transform .2s;
+    }
+    a.step:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .step-no { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); }
+    .step h3 { margin-top: 8px; font-size: 15.5px; font-weight: 700; }
+    .step p { margin-top: 6px; font-size: 13.5px; color: var(--muted); flex: 1; }
+    .status {
+      display: inline-flex; align-items: center; gap: 7px;
+      align-self: flex-start;
+      margin-top: 16px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      color: var(--faint);
+      border: 1px dashed var(--border);
+    }
+    .status.live { color: var(--accent); background: var(--accent-soft); border: 0; }
+
+    /* ---------- Lộ trình ---------- */
+    .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+    .section-head p { font-size: 13.5px; color: var(--muted); }
+    .roadmap { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 26px 0 0; padding: 0; }
+    .roadmap li { position: relative; padding: 0 16px 0 0; }
+    .roadmap li::before {
+      content: "";
+      position: absolute; top: 9px; left: 20px; right: 0;
+      height: 2px;
+      background: var(--border);
+    }
+    .roadmap li:last-child::before { display: none; }
+    .roadmap li.done::before { background: var(--ok); }
+    .node {
+      position: relative;
+      display: grid; place-items: center;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      color: var(--surface);
+    }
+    .done .node { background: var(--ok); border-color: var(--ok); }
+    .next .node { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+    .next .node::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+    .roadmap .eyebrow { display: block; margin-top: 14px; color: var(--faint); }
+    .roadmap h3 { margin-top: 4px; font-size: 15px; font-weight: 700; line-height: 1.35; }
+    .roadmap p { margin-top: 4px; font-size: 13px; color: var(--muted); }
+    .badge { display: inline-block; margin-top: 10px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+    .done .badge { color: var(--ok); background: var(--ok-soft); }
+    .next .badge { color: var(--live-ink); background: var(--live); }
+    .todo .badge { color: var(--faint); border: 1px solid var(--border); }
+
+    /* ---------- Footer ---------- */
+    footer { margin-top: 48px; padding: 24px 0 32px; border-top: 1px solid var(--border); font-size: 13px; color: var(--faint); text-align: center; }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 980px) {
+      .hero-body { grid-template-columns: 1fr; }
+      .hero-art { display: none; }
+      .layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 0 16px; }
+      .hero { padding-bottom: 96px; }
+      .hero-body { margin-top: 36px; }
+      .school-dept { display: none; }
+      .hero-meta { gap: 16px 28px; }
+      .hero-meta > div + div { padding-left: 0; border-left: 0; }
+      .card-pad, .panel { padding: 20px; }
+      .steps { grid-template-columns: 1fr; }
+      .roadmap { grid-template-columns: 1fr; gap: 0; }
+      .roadmap li { padding: 0 0 22px 34px; }
+      .roadmap li:last-child { padding-bottom: 0; }
+      .roadmap li::before { top: 20px; bottom: 0; left: 9px; right: auto; width: 2px; height: auto; }
+      .roadmap .node { position: absolute; left: 0; top: 0; }
+      .roadmap .eyebrow { margin-top: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    /* =====================================================================
+       THÔNG TIN CẦN CHỈNH SỬA — chỉ cần sửa trong khối CONFIG này.
+       Trường nào để trống ("") thì trang sẽ tự ẩn phần tương ứng.
+       ===================================================================== */
+    const CONFIG = {
+      course: {
+        school: "Đại học Bách Khoa – Đại học Quốc gia Thành phố Hồ Chí Minh",
+        faculty: "Khoa Khoa học và Kỹ thuật Máy tính",
+        code: "CO5177",
+        name: "Nền tảng lập trình cho phân tích và trực quan dữ liệu",
+        teacher: "Lê Thành Sách",
+        semester: "Học kỳ 261 (2026–2027)",
+      },
+
+      team: {
+        name: "G1",
+        repoUrl: "https://github.com/minhtho1503/data-analysis-visualization-g1",
+        members: [
+          {
+            name: "Phan Thị Minh Thơ",
+            mshv: "2470112",
+            role: "Xử lý dữ liệu Text & Image",
+            topics: ["text", "image"],
+            github: "https://github.com/minhtho1503",
+          },
+          {
+            name: "Nguyễn Thị Thu An",
+            mshv: "",  // TODO: MSHV
+            role: "Xử lý dữ liệu Tabular & Image",
+            topics: ["tabular", "image"],
+            github: "", // TODO: link GitHub
+          },
+        ],
+      },
+
+      // Mỗi loại dữ liệu là một tab. Điền link (notebook, báo cáo, dataset...) khi có kết quả.
+      topics: [
+        {
+          id: "tabular",
+          title: "Tabular Data",
+          description: "Phân tích và trực quan hóa dữ liệu dạng bảng",
+          links: { dataset: "", eda: "", model: "" },
+        },
+        {
+          id: "text",
+          title: "Text Data",
+          description: "Xử lý và phân tích dữ liệu văn bản",
+          links: { dataset: "", eda: "", model: "" },
+        },
+        {
+          id: "image",
+          title: "Image Data",
+          description: "Xử lý và trực quan hóa dữ liệu hình ảnh",
+          links: { dataset: "", eda: "", model: "" },
+        },
+      ],
+
+      steps: [
+        { key: "dataset", title: "Bộ dữ liệu", text: "Giới thiệu nguồn dữ liệu, quy mô, ý nghĩa các trường và bài toán đặt ra." },
+        { key: "eda", title: "Phân tích khám phá (EDA)", text: "Làm sạch, thống kê mô tả và trực quan hóa để rút ra các insight chính." },
+        { key: "model", title: "Mô hình hóa", text: "Xây dựng baseline, huấn luyện và đánh giá mô hình phân loại hoặc hồi quy." },
+      ],
+
+      // status: "done" (hoàn thành) | "next" (đang thực hiện) | "todo" (sắp tới)
+      roadmap: [
+        { code: "A.P1", week: "Tuần 38", title: "Landing page", text: "Tạo trang giới thiệu bài tập lớn.", status: "done" },
+        { code: "A.P2", week: "Tuần 41", title: "Chọn dataset + 30% EDA", text: "Chốt bộ dữ liệu và phân tích bước đầu.", status: "next" },
+        { code: "A.P3", week: "Tuần 44", title: "Hoàn thành EDA", text: "Hoàn thiện phân tích và trực quan hóa.", status: "todo" },
+        { code: "A.P4", week: "Tuần 46", title: "Machine Learning", text: "Hoàn thành mô hình và toàn bộ project.", status: "todo" },
+      ],
+
+      tools: ["Python", "NumPy", "PyTorch", "Matplotlib", "Seaborn", "Plotly"],
+    };
+    /* ===================== HẾT PHẦN CẦN CHỈNH SỬA ===================== */
+
+    const ICONS = {
+      tabular: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M3 14.75h18M9.5 4v16"/></svg>',
+      text: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+      image: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5 2.5-2.2 4 3.7"/></svg>',
+      github: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.55v-2.1c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.66.8.55A11.5 11.5 0 0 0 12 .5z"/></svg>',
+      team: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.7a3.5 3.5 0 0 1 0 6.6M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg>',
+      tools: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg>',
+      route: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+      arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>',
+      check: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+      school: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 9 9.5-5 9.5 5-9.5 5z"/><path d="M6.5 11.5V16c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.200v-4.500M21.5 9v5.5"/></svg>',
+      sun: '<svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.500v2M2.5 12h2M19.5 12h2M5.3 5.300l1.4 1.400M17.3 17.300l1.4 1.400M5.3 18.700l1.4-1.400M17.3 6.700l1.4-1.4"/></svg>',
+      moon: '<svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.200A8.5 8.5 0 0 1 9.8 3.500a8.5 8.5 0 1 0 10.7 10.700z"/></svg>',
+    };
+
+    const HERO_ART = `
+      <svg class="hero-art" viewBox="0 0 380 300" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="g-img" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9ecd8"/><stop offset="1" stop-color="#4fb892"/></linearGradient>
+        </defs>
+        <g transform="rotate(-5 130 90)">
+          <rect class="a-card" x="24" y="22" width="216" height="140" rx="16"/>
+          <rect class="a-head" x="40" y="38" width="184" height="22" rx="7"/>
+          <g class="a-cell">
+            <rect x="40" y="70" width="52" height="14" rx="5"/><rect x="100" y="70" width="60" height="14" rx="5"/><rect x="168" y="70" width="56" height="14" rx="5"/>
+            <rect x="40" y="92" width="52" height="14" rx="5"/><rect x="100" y="92" width="60" height="14" rx="5"/><rect x="168" y="92" width="56" height="14" rx="5"/>
+            <rect x="40" y="114" width="52" height="14" rx="5"/><rect x="100" y="114" width="60" height="14" rx="5"/><rect x="168" y="114" width="56" height="14" rx="5"/>
+            <rect x="40" y="136" width="52" height="12" rx="5"/><rect x="100" y="136" width="60" height="12" rx="5"/><rect x="168" y="136" width="56" height="12" rx="5"/>
+          </g>
+        </g>
+        <g transform="rotate(4 270 190)">
+          <rect class="a-card" x="180" y="124" width="184" height="124" rx="16"/>
+          <rect class="a-token" x="198" y="144" width="62" height="12" rx="6"/>
+          <rect class="a-cell" x="266" y="144" width="80" height="12" rx="6"/>
+          <rect class="a-cell" x="198" y="166" width="96" height="12" rx="6"/>
+          <rect class="a-token" x="300" y="166" width="46" height="12" rx="6" fill-opacity=".7"/>
+          <rect class="a-cell" x="198" y="188" width="40" height="12" rx="6"/>
+          <rect class="a-token" x="244" y="188" width="72" height="12" rx="6"/>
+          <rect class="a-cell" x="198" y="210" width="112" height="12" rx="6"/>
+        </g>
+        <g transform="rotate(-3 110 230)">
+          <rect x="46" y="176" width="150" height="108" rx="16" fill="url(#g-img)"/>
+          <circle cx="156" cy="206" r="13" fill="#fcd34d"/>
+          <path d="M46 268 92 222l34 30 22-18 48 34a16 16 0 0 1-16 16H62a16 16 0 0 1-16-16z" fill="#1f5c47" fill-opacity=".5"/>
+        </g>
+      </svg>`;
+
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const initials = (name) => name.trim().split(/\s+/).slice(-2).map((w) => w[0]).join("").toUpperCase();
+    const shortName = (name) => name.trim().split(/\s+/).slice(-2).join(" ");
+    const topicById = (id) => CONFIG.topics.find((t) => t.id === id);
+    const ext = 'target="_blank" rel="noopener"';
+
+    const { course, team, topics, steps, roadmap, tools } = CONFIG;
+    const teamLabel = team.name || team.members.map((m) => shortName(m.name)).join(" & ");
+    const repoUrl = team.repoUrl || (team.members.find((m) => m.github) || {}).github || "";
+
+    const memberHtml = (m) => `
+      <div class="member">
+        <div class="member-head">
+          <div class="avatar" aria-hidden="true">${esc(initials(m.name))}</div>
+          <div>
+            <div class="member-name">${esc(m.name)}</div>
+            ${m.mshv ? `<div class="member-id">MSHV ${esc(m.mshv)}</div>` : ""}
+          </div>
+        </div>
+        <div class="member-role">${esc(m.role)}</div>
+        <div class="chips">
+          ${m.topics.map((id) => `<span class="chip" data-topic="${id}">${ICONS[id].replace(/width="20" height="20"/, 'width="13" height="13"')}${esc(topicById(id).title.replace(" Data", ""))}</span>`).join("")}
+        </div>
+        ${m.github ? `<a class="link" href="${esc(m.github)}" ${ext}>${ICONS.github} GitHub Profile ${ICONS.arrow}</a>` : ""}
+      </div>`;
+
+    const stepHtml = (topic, s, i) => {
+      const href = topic.links[s.key];
+      const tag = href ? "a" : "div";
+      return `
+        <${tag} class="step" ${href ? `href="${esc(href)}" ${ext}` : ""}>
+          <span class="step-no">0${i + 1}</span>
+          <h3>${esc(s.title)}</h3>
+          <p>${esc(s.text)}</p>
+          <span class="status ${href ? "live" : ""}">${href ? `Xem chi tiết ${ICONS.arrow}` : "Sắp cập nhật"}</span>
+        </${tag}>`;
+    };
+
+    const panelHtml = (t, i) => {
+      const owners = team.members.filter((m) => m.topics.includes(t.id));
+      return `
+        <section class="panel" id="panel-${t.id}" role="tabpanel" aria-labelledby="tab-${t.id}" data-topic="${t.id}" ${i ? "hidden" : ""}>
+          <div class="panel-head">
+            <div class="panel-icon">${ICONS[t.id].replace(/width="20" height="20"/, 'width="26" height="26"')}</div>
+            <div>
+              <h2>${esc(t.title)}</h2>
+              <p>${esc(t.description)}</p>
+            </div>
+          </div>
+          <div class="owners">
+            <span>Phụ trách:</span>
+            ${owners.map((m) => `<span class="chip">${esc(m.name)}</span>`).join("")}
+          </div>
+          <div class="steps">${steps.map((s, n) => stepHtml(t, s, n)).join("")}</div>
+        </section>`;
+    };
+
+    const BADGE = { done: "Hoàn thành", next: "Đang thực hiện", todo: "Sắp tới" };
+
+    document.getElementById("app").innerHTML = `
+      <header class="hero">
+        <div class="container">
+          <div class="topbar">
+            <div class="school">
+              <div class="school-mark">${ICONS.school}</div>
+              <div>
+                <div class="school-name">${esc(course.school)}</div>
+                <div class="school-dept">${esc(course.faculty)}</div>
+              </div>
+            </div>
+            <div class="topbar-actions">
+              <span class="pill"><span class="dot"></span>${esc(course.semester)}</span>
+              <button class="icon-btn" id="theme-toggle" type="button" aria-label="Đổi giao diện sáng/tối">${ICONS.sun}${ICONS.moon}</button>
+            </div>
+          </div>
+
+          <div class="hero-body">
+            <div>
+              <p class="eyebrow">${esc(course.code)} · Bài tập lớn</p>
+              <h1>${esc(course.name).replace("phân tích và trực quan dữ liệu", "<em>phân tích và trực quan dữ liệu</em>")}</h1>
+              <p class="lede">Khám phá, trực quan hóa và mô hình hóa trên ba loại dữ liệu — dạng bảng, văn bản và hình ảnh — bằng Python.</p>
+              <dl class="hero-meta">
+                <div><dt>Giảng viên</dt><dd>${esc(course.teacher)}</dd></div>
+                <div><dt>Nhóm thực hiện</dt><dd>${esc(teamLabel)}</dd></div>
+                <div><dt>Loại dữ liệu</dt><dd>${topics.map((t) => esc(t.title.replace(" Data", ""))).join(" · ")}</dd></div>
+              </dl>
+            </div>
+            ${HERO_ART}
+          </div>
+        </div>
+      </header>
+
+      <main class="container">
+        <div class="layout">
+          <aside class="stack">
+            <div class="card card-pad">
+              <h2 class="card-title">${ICONS.team} Thông tin nhóm</h2>
+              <div class="divider"></div>
+              ${team.name ? `<div class="eyebrow label">Tên nhóm</div><div class="team-name">${esc(team.name)}</div><div class="divider"></div>` : ""}
+              <div class="eyebrow label">Thành viên</div>
+              <div class="members">${team.members.map(memberHtml).join("")}</div>
+              ${repoUrl ? `
+                <div class="divider"></div>
+                <div class="eyebrow label">Mã nguồn nhóm</div>
+                <a class="btn" href="${esc(repoUrl)}" ${ext}>${ICONS.github} ${team.repoUrl ? "GitHub Repository" : "GitHub"}</a>` : ""}
+            </div>
+
+            <div class="card card-pad">
+              <h2 class="card-title">${ICONS.tools} Công cụ sử dụng</h2>
+              <div class="chips" style="margin-top:14px">${tools.map((t) => `<span class="chip plain">${esc(t)}</span>`).join("")}</div>
+            </div>
+          </aside>
+
+          <div class="stack">
+            <div class="card">
+              <div class="tabs" role="tablist" aria-label="Loại dữ liệu">
+                ${topics.map((t, i) => `<button class="tab" role="tab" type="button" id="tab-${t.id}" data-topic="${t.id}" aria-controls="panel-${t.id}" aria-selected="${!i}" tabindex="${i ? -1 : 0}">${ICONS[t.id]}${esc(t.title)}</button>`).join("")}
+              </div>
+              ${topics.map(panelHtml).join("")}
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head">
+                <h2 class="card-title">${ICONS.route} Lộ trình bài tập lớn</h2>
+                <p>A1 · Exploratory Data Analysis &nbsp;→&nbsp; A2 · Classification / Regression</p>
+              </div>
+              <ol class="roadmap">
+                ${roadmap.map((r) => `
+                  <li class="${r.status}">
+                    <span class="node">${r.status === "done" ? ICONS.check : ""}</span>
+                    <span class="eyebrow">${esc(r.code)} · ${esc(r.week)}</span>
+                    <h3>${esc(r.title)}</h3>
+                    <p>${esc(r.text)}</p>
+                    <span class="badge">${BADGE[r.status]}</span>
+                  </li>`).join("")}
+              </ol>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer>
+        <div class="container">© 2026 ${esc(teamLabel)} · ${esc(course.code)} – ${esc(course.name)} · Trường Đại học Bách Khoa – ĐHQG-HCM</div>
+      </footer>`;
+
+    /* ---------- Tabs ---------- */
+    const tabs = [...document.querySelectorAll(".tab")];
+    const selectTab = (id, focus) => {
+      tabs.forEach((tab) => {
+        const on = tab.dataset.topic === id;
+        tab.setAttribute("aria-selected", on);
+        tab.tabIndex = on ? 0 : -1;
+        document.getElementById(`panel-${tab.dataset.topic}`).hidden = !on;
+        if (on && focus) tab.focus();
+      });
+    };
+    tabs.forEach((tab, i) => {
+      tab.addEventListener("click", () => {
+        selectTab(tab.dataset.topic);
+        history.replaceState(null, "", `#${tab.dataset.topic}`);
+      });
+      tab.addEventListener("keydown", (e) => {
+        const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        selectTab(tabs[(i + step + tabs.length) % tabs.length].dataset.topic, true);
+      });
+    });
+    if (topicById(location.hash.slice(1))) selectTab(location.hash.slice(1));
+
+    /* ---------- Giao diện sáng / tối ---------- */
+    const root = document.documentElement;
+    try { const saved = localStorage.getItem("theme"); if (saved) root.dataset.theme = saved; } catch (e) {}
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const isDark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      root.dataset.theme = isDark ? "light" : "dark";
+      try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+    });
+  </script>
+</body>
+</html>
