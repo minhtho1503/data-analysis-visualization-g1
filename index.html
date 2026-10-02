@@ -361,7 +361,8 @@
     .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
     .section-head p { font-size: 13.5px; color: var(--muted); }
     .roadmap { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 26px 0 0; padding: 0; }
-    .roadmap li { position: relative; padding: 0 16px 0 0; }
+    .roadmap li { position: relative; display: grid; grid-row: span 6; grid-template-rows: subgrid; padding: 0 16px 0 0; }
+    .roadmap .node, .roadmap .badge { justify-self: start; }
     .roadmap li::before {
       content: "";
       position: absolute; top: 9px; left: 20px; right: 0;
@@ -411,7 +412,7 @@
       .card-pad, .panel { padding: 20px; }
       .steps { grid-template-columns: 1fr; }
       .roadmap { grid-template-columns: 1fr; gap: 0; }
-      .roadmap li { padding: 0 0 22px 34px; }
+      .roadmap li { display: block; padding: 0 0 22px 34px; }
       .roadmap li:last-child { padding-bottom: 0; }
       .roadmap li::before { top: 20px; bottom: 0; left: 9px; right: auto; width: 2px; height: auto; }
       .roadmap .node { position: absolute; left: 0; top: 0; }
