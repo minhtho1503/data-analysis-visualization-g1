@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slides | Image | Group G1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/slides.css">
+</head>
+<body data-deck="G1 | Nhận diện món ăn Việt Nam qua ảnh">
+<main class="deck">
+
+<section class="slide dark">
+  <div class="bars" aria-hidden="true"><i></i><i></i><i></i></div>
+  <p class="kicker">CO5177 | Nhóm G1 | Dữ liệu ảnh</p>
+  <div class="title-in">
+    <h1>Nhận diện món ăn Việt Nam qua ảnh</h1>
+  </div>
+  <div class="title-meta">
+    <div><b>Thực hiện</b>Phan Thị Minh Thơ (2470112)<br>Nguyễn Thị Thu An (2470315)</div>
+    <div><b>Môn học</b>Nền tảng lập trình cho phân tích và trực quan dữ liệu</div>
+    <div><b>Giảng viên</b>TS. Lê Thành Sách</div>
+    <div><b>Học kỳ</b>HK261</div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">Nội dung</p>
+  <h2>Nội dung trình bày</h2>
+  <div class="body">
+    <ol class="toc">
+      <li><div><h3>Bài toán và hướng tiếp cận</h3><p>Trường hợp sử dụng, thước đo, quy trình chung, dự đoán top-k</p></div></li>
+      <li><div><h3>Bộ dữ liệu</h3><p>30VNFoods, cách chia, cấu trúc thư mục</p></div></li>
+      <li><div><h3>Kiểm tra chất lượng dữ liệu</h3><p>File lỗi, định dạng, kích thước, ảnh trùng</p></div></li>
+      <li><div><h3>Khám phá dữ liệu</h3><p>Số ảnh theo món, ảnh mẫu, màu sắc</p></div></li>
+      <li><div><h3>Tiền xử lý và tăng cường dữ liệu</h3><p>Làm sạch, thu nhỏ, chuẩn hóa, tăng cường trên train</p></div></li>
+      <li><div><h3>Xây dựng mô hình</h3><p>ResNet50 trích đặc trưng, fine-tune nhẹ, baseline thủ công</p></div></li>
+      <li><div><h3>Đánh giá và phân tích lỗi</h3><p>Kết quả trên test, các cặp món bị nhầm, lỗi của nhãn</p></div></li>
+      <li><div><h3>Kết luận</h3><p>Kết quả chính, hạn chế, hướng mở rộng</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 01 -->
+<section class="slide section" data-sec="1"></section>
+
+<section class="slide">
+  <p class="kicker">01 | Bài toán và hướng tiếp cận</p>
+  <h2>Bài toán: nhận diện món ăn từ ảnh chụp</h2>
+  <div class="body">
+    <div class="pipe">
+      <div class="node">
+        <svg width="74" height="110" viewBox="0 0 74 110" fill="none" stroke="#121314" stroke-width="2.5" aria-hidden="true"><rect x="4" y="4" width="66" height="102" rx="9"/><path d="M28 13h18"/><circle cx="37" cy="96" r="4"/><rect x="16" y="32" width="42" height="34"/><circle cx="37" cy="49" r="8"/></svg>
+        <p>Người dùng chụp<br>ảnh món ăn</p>
+      </div>
+      <div class="arr"><span>ảnh</span></div>
+      <div class="node"><img src="figures/slides/pred_bun_bo_hue_ok.jpg" width="190" height="190" alt="Ảnh chụp một tô bún bò Huế"><p>Ảnh thật</p></div>
+      <div class="arr"></div>
+      <div class="node dark"><h3>Mô hình</h3><p>phân loại ảnh<br>30 món</p></div>
+      <div class="arr"><span>tên món</span></div>
+      <div class="node hot"><h3>Kết quả</h3><p class="big">Bún bò Huế</p><p class="note">hoặc 3 gợi ý</p></div>
+    </div>
+    <p>Ứng dụng ẩm thực hoặc du lịch: đầu vào là một ảnh, đầu ra là tên món trong <strong>30 món ăn Việt Nam</strong> phổ biến. Mỗi ảnh có một nhãn. Đây là bài toán phân loại ảnh có giám sát.</p>
+    <div class="cards">
+      <div class="card"><h3>Accuracy</h3><p>Tỉ lệ ảnh có món dự đoán đầu tiên đúng.</p></div>
+      <div class="card hot"><h3>Macro-F1</h3><p>Trung bình F1 của 30 món, mỗi món trọng số như nhau. Dùng để chọn mô hình.</p></div>
+      <div class="card"><h3>Top-3 / Top-5</h3><p>Tỉ lệ ảnh có món đúng nằm trong 3 hoặc 5 gợi ý đầu tiên.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">01 | Bài toán và hướng tiếp cận</p>
+  <h2>Hướng tiếp cận chung</h2>
+  <div class="body">
+    <div class="pipe">
+      <div class="node" style="width: 250px">
+        <h3>Dữ liệu có nhãn</h3>
+        <div style="display: flex; gap: 8px">
+          <div><img src="figures/slides/sample_pho.jpg" width="96" height="96" alt="Ảnh phở"><p class="note">Pho</p></div>
+          <div><img src="figures/slides/sample_banh_mi.jpg" width="96" height="96" alt="Ảnh bánh mì"><p class="note">Banh mi</p></div>
+        </div>
+        <p>ảnh + nhãn<br>train / val / test</p>
+      </div>
+      <div class="arr"><span>train</span></div>
+      <div class="node dark" style="width: 230px"><h3>Huấn luyện</h3><p>Ảnh thành vector đặc trưng, rồi bộ phân loại học trên train</p></div>
+      <div class="arr"><span>val</span></div>
+      <div class="node" style="width: 200px"><h3>Chọn mô hình</h3><p>Mô hình có macro-F1 cao nhất trên val</p></div>
+      <div class="arr"><span>test</span></div>
+      <div class="node hot" style="width: 230px"><h3>Dự đoán, đánh giá</h3><p>Xác suất cho 30 món, xếp hạng top-k; đánh giá một lần trên test</p></div>
+    </div>
+    <ul class="points">
+      <li><strong>Đặc trưng:</strong> so sánh đặc trưng thiết kế bằng tay (màu sắc, điểm nổi bật) với đặc trưng của một mạng CNN đã huấn luyện sẵn trên ImageNet.</li>
+      <li><strong>Bộ phân loại:</strong> giống nhau ở mọi mô hình (tuyến tính + softmax), để khác biệt chỉ đến từ đặc trưng.</li>
+      <li><strong>Tập test</strong> chỉ được dùng sau khi đã chọn xong mô hình, để điểm số phản ánh đúng ảnh chưa từng thấy.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">01 | Bài toán và hướng tiếp cận</p>
+  <h2>Dự đoán: xác suất và top-k</h2>
+  <div class="body">
+    <p>Với mỗi ảnh, mô hình trả về một xác suất cho từng món trong 30 món (tổng bằng 1). Món có xác suất cao nhất là dự đoán (top-1); k món cao nhất là danh sách gợi ý (top-k).</p>
+    <div class="row" style="flex: 0 0 auto">
+      <div class="col">
+        <div class="topk">
+          <img src="figures/slides/pred_banh_bot_loc.jpg" alt="Ảnh bánh bột lọc">
+          <div class="bars-k">
+            <h3>Nhãn thật: Banh bot loc</h3>
+            <div class="kbar true"><span>1.</span><span>Banh bot loc</span><i style="width: 94%"></i><span class="n">0.94</span></div>
+            <div class="kbar"><span>2.</span><span>Chao long</span><i style="width: 1%"></i><span class="n">0.01</span></div>
+            <div class="kbar"><span>3.</span><span>Hu tieu</span><i style="width: 1%"></i><span class="n">0.01</span></div>
+            <p class="verdict">Top-1 <span class="ok">đúng</span>, top-3 <span class="ok">đúng</span>.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="topk">
+          <img src="figures/slides/pred_bun_bo_hue_top3.jpg" alt="Ảnh bún bò Huế">
+          <div class="bars-k">
+            <h3>Nhãn thật: Bun bo Hue</h3>
+            <div class="kbar"><span>1.</span><span>Banh canh</span><i style="width: 45%"></i><span class="n">0.45</span></div>
+            <div class="kbar"><span>2.</span><span>Pho</span><i style="width: 18%"></i><span class="n">0.18</span></div>
+            <div class="kbar true"><span>3.</span><span>Bun bo Hue</span><i style="width: 16%"></i><span class="n">0.16</span></div>
+            <p class="verdict">Top-1 <span class="no">sai</span>, top-3 <span class="ok">đúng</span>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Hai ảnh test và xác suất thật của mô hình cuối cùng. Ứng dụng có thể hiện một câu trả lời khi xác suất cao, và cả 3 gợi ý khi mô hình chưa chắc chắn, nên ngoài accuracy nhóm báo cáo thêm top-3 và top-5 accuracy.</p>
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="slide section" data-sec="2"></section>
+
+<section class="slide">
+  <p class="kicker">02 | Bộ dữ liệu</p>
+  <h2>Bộ dữ liệu 30VNFoods</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w45">
+        <ul class="points sm">
+          <li><strong>Nguồn:</strong> Do et al., COMNETSAT 2021; bản sao công khai trên Hugging Face <code>vuongnhathien/30VNFoods</code>.</li>
+          <li><strong>Giấy phép:</strong> CC BY-NC-SA 4.0, phi thương mại, phải ghi nguồn.</li>
+          <li><strong>Nội dung:</strong> ảnh chụp 30 món ăn Việt Nam thu thập từ Internet; nhãn là tên món.</li>
+          <li><strong>Kích thước ảnh:</strong> cạnh ngắn từ 83 đến 4 912 px, trung vị 700 px; chỉ 9 ảnh dưới 128 px.</li>
+          <li><strong>Kết quả gốc:</strong> accuracy 77.54%, top-5 96.07% trên tập test.</li>
+        </ul>
+        <table class="sm">
+          <thead><tr><th>Tập</th><th class="n">Ban đầu</th><th class="n">Tỉ lệ</th><th class="n">Sau làm sạch</th><th class="n">Mỗi món</th></tr></thead>
+          <tbody>
+            <tr><td>train</td><td class="n">17 581</td><td class="n">69.9%</td><td class="n">17 215</td><td class="n">306 - 1 047</td></tr>
+            <tr><td>val</td><td class="n">2 515</td><td class="n">10.0%</td><td class="n">2 515</td><td class="n">45 - 153</td></tr>
+            <tr><td>test</td><td class="n">5 040</td><td class="n">20.1%</td><td class="n">5 040</td><td class="n">89 - 306</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col">
+        <div class="tiles">
+          <figure><img src="figures/slides/sample_pho.jpg" alt=""><figcaption>Pho</figcaption></figure>
+          <figure><img src="figures/slides/sample_banh_mi.jpg" alt=""><figcaption>Banh mi</figcaption></figure>
+          <figure><img src="figures/slides/sample_com_tam.jpg" alt=""><figcaption>Com tam</figcaption></figure>
+          <figure><img src="figures/slides/sample_banh_xeo.jpg" alt=""><figcaption>Banh xeo</figcaption></figure>
+          <figure><img src="figures/slides/sample_goi_cuon.jpg" alt=""><figcaption>Goi cuon</figcaption></figure>
+          <figure><img src="figures/slides/sample_bun_rieu.jpg" alt=""><figcaption>Bun rieu</figcaption></figure>
+          <figure><img src="figures/slides/sample_banh_beo.jpg" alt=""><figcaption>Banh beo</figcaption></figure>
+          <figure><img src="figures/slides/sample_cao_lau.jpg" alt=""><figcaption>Cao lau</figcaption></figure>
+        </div>
+        <p class="note">Ảnh train và nhãn của chúng (tên thư mục, viết không dấu). Nhóm giữ nguyên cách chia của tác giả để so sánh được với bài báo gốc.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">02 | Bộ dữ liệu</p>
+  <h2>Cấu trúc thư mục dữ liệu</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w45">
+<pre class="tree">data/
+  train/
+    Banh beo/   1.jpg  10.jpg  ...
+    Banh bot loc/
+    ...         (30 thu muc)
+  val/          (cung cau truc)
+  test/         (cung cau truc)
+  labels.csv</pre>
+      </div>
+      <div class="col">
+        <ul class="points">
+          <li>Cấu trúc phân loại ảnh của Ultralytics YOLO: một thư mục cho mỗi tập, một thư mục con cho mỗi món.</li>
+          <li>Mỗi ảnh chỉ có một nhãn, nên nhãn được lưu bằng tên thư mục chứa ảnh, không cần file nhãn riêng.</li>
+          <li><code>labels.csv</code> liệt kê 25 136 ảnh với tập và nhãn, dùng cho kiểm tra chất lượng và phân tích.</li>
+        </ul>
+        <table class="sm">
+          <thead><tr><th>path</th><th>split</th><th>label</th></tr></thead>
+          <tbody>
+            <tr><td><code>train/Banh beo/1.jpg</code></td><td>train</td><td>Banh beo</td></tr>
+            <tr><td><code>val/Banh beo/103.jpg</code></td><td>val</td><td>Banh beo</td></tr>
+            <tr><td><code>test/Banh beo/109.jpg</code></td><td>test</td><td>Banh beo</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 -->
+<section class="slide section" data-sec="3"></section>
+
+<section class="slide">
+  <p class="kicker">03 | Kiểm tra chất lượng dữ liệu</p>
+  <h2>File lỗi, định dạng, chế độ màu và kích thước ảnh</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig01_image_sizes.png" alt="Phân phối kích thước ảnh"></div>
+    <table class="sm">
+      <thead><tr><th>Kiểm tra</th><th>Kết quả</th><th>Cách xử lý</th></tr></thead>
+      <tbody>
+        <tr><td>File lỗi</td><td>0 file</td><td>nếu có thì bỏ khỏi train/val/test</td></tr>
+        <tr><td>Định dạng khác JPEG</td><td>129 file (PNG, MPO, BMP) có đuôi <code>.jpg</code></td><td>giữ lại, thư viện đọc ảnh theo nội dung file</td></tr>
+        <tr><td>Chế độ màu khác RGB</td><td>0 ảnh</td><td>vẫn đổi sang RGB, cần cho ảnh mới</td></tr>
+        <tr><td>Cạnh ngắn dưới 128 px</td><td>9 ảnh (0.04%), 5 ở train</td><td>bỏ khỏi train; giữ ở val/test và phóng to</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">03 | Kiểm tra chất lượng dữ liệu</p>
+  <h2>Phát hiện ảnh trùng bằng pHash</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w55">
+        <ul class="points sm">
+          <li><strong>pHash:</strong> mã 64 bit mô tả cấu trúc tổng thể của ảnh; hai bản của cùng một ảnh (nén lại, thu nhỏ, cắt nhẹ) có mã giống hoặc gần giống nhau.</li>
+          <li>So sánh toàn bộ 315 896 680 cặp ảnh; hai ảnh trùng nếu mã khác nhau không quá 6 bit.</li>
+          <li>Kết quả: 403 cặp (239 trùng hoàn toàn, 164 gần trùng), liên quan đến 757 ảnh (3.0%).</li>
+        </ul>
+        <table class="sm">
+          <thead><tr><th>Loại trùng</th><th class="n">Số cặp</th><th>Cách xử lý</th></tr></thead>
+          <tbody>
+            <tr><td>Giữa train và val/test</td><td class="n">186</td><td>bỏ khỏi train</td></tr>
+            <tr><td>Mang nhãn khác nhau</td><td class="n">65</td><td>bỏ khỏi train; đánh dấu ở val/test</td></tr>
+            <tr><td>Cùng nhãn trong train</td><td class="n">153</td><td>giữ một bản cho mỗi nhóm</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="fig"><img src="figures/fig02_duplicate_pairs.jpg" alt="Ví dụ các cặp ảnh trùng"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 -->
+<section class="slide section" data-sec="4"></section>
+
+<section class="slide">
+  <p class="kicker">04 | Khám phá dữ liệu</p>
+  <h2>Số ảnh theo món và theo tập</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w40">
+        <ul class="points">
+          <li>Bún bò Huế có nhiều ảnh train nhất (1 071), bánh pía ít nhất (310): chênh 3.5 lần.</li>
+          <li>Ba tập giữ cùng tỉ lệ giữa các món.</li>
+        </ul>
+        <p class="key"><b>Nhận xét</b>Mất cân bằng ở mức vừa phải: giữ mọi món, không lấy mẫu lại, nhưng chọn mô hình theo macro-F1 để mọi món có trọng số như nhau.</p>
+      </div>
+      <div class="fig"><img src="figures/fig03_class_counts.png" alt="Số ảnh của mỗi món theo tập"></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">04 | Khám phá dữ liệu</p>
+  <h2>Ảnh mẫu của từng món</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w35">
+        <ul class="points">
+          <li>Bốn ảnh train ngẫu nhiên của mỗi món.</li>
+          <li>Ảnh chụp từ nhiều góc, nhiều kiểu bày đĩa và điều kiện ánh sáng khác nhau.</li>
+        </ul>
+        <p class="key"><b>Nhận xét</b>Nhiều món rất giống nhau: các món nước (phở, bún bò Huế, hủ tiếu, bún riêu, bánh canh) và các loại bánh làm từ bột gạo (bánh bèo, bánh đúc, bánh bột lọc).</p>
+      </div>
+      <div class="fig"><img src="figures/fig04_sample_grid.jpg" alt="Bốn ảnh train ngẫu nhiên của mỗi món"></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">04 | Khám phá dữ liệu</p>
+  <h2>Độ bão hòa và độ sáng theo món</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig05_colour_stats.png" alt="Độ bão hòa và độ sáng trung bình theo món"></div>
+    <p class="key"><b>Nhận xét</b>Trung vị độ bão hòa của các món chỉ trải từ 0.33 (cháo lòng) đến 0.52 (bánh xèo), trong khi khoảng tứ phân vị bên trong một món trung bình đã rộng 0.16: màu sắc tổng thể khó đủ để phân biệt 30 món.</p>
+  </div>
+</section>
+
+<!-- 05 -->
+<section class="slide section" data-sec="5"></section>
+
+<section class="slide">
+  <p class="kicker">05 | Tiền xử lý và tăng cường dữ liệu</p>
+  <h2>Các bước tiền xử lý</h2>
+  <div class="body">
+    <ol class="steps">
+      <li><b>Bước 1</b><h3>Làm sạch train</h3>Bỏ 5 ảnh nhỏ, 182 ảnh trùng với val/test, 35 ảnh trùng mang nhãn khác, 144 ảnh lặp: còn 17 215 ảnh.</li>
+      <li><b>Bước 2</b><h3>Mã hóa nhãn</h3><code>LabelEncoder</code>: 30 tên món thành số nguyên 0-29.</li>
+      <li><b>Bước 3</b><h3>Thư mục processed</h3>Thu nhỏ cạnh ngắn về 256 px, lưu vào <code>data/processed/</code> cùng cấu trúc; ảnh gốc giữ nguyên.</li>
+      <li><b>Bước 4</b><h3>Đưa vào mạng</h3>Cạnh ngắn 256 px, cắt giữa 224 x 224, chuẩn hóa theo trung bình và độ lệch chuẩn của ImageNet.</li>
+      <li><b>Bước 5</b><h3>Chuẩn hóa đặc trưng</h3>L2 cho vector ResNet50; <code>StandardScaler</code> cho đặc trưng thủ công.</li>
+    </ol>
+    <ul class="points sm">
+      <li>ResNet50 nhận ảnh 224 x 224 trong khi ảnh gốc có cạnh ngắn trung vị 700 px; giải mã ảnh JPEG lớn ở mọi epoch rất chậm, nên ảnh chỉ được thu nhỏ một lần và dùng chung cho mọi mô hình.</li>
+      <li>Val và test không bị bỏ ảnh nào; ảnh test có bản trùng được đánh dấu để phân tích lỗi.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">05 | Tiền xử lý và tăng cường dữ liệu</p>
+  <h2>Tăng cường dữ liệu</h2>
+  <div class="body">
+    <table class="sm">
+      <thead><tr><th>Phép biến đổi</th><th>Tham số</th><th>Mục tiêu</th></tr></thead>
+      <tbody>
+        <tr><td>Cắt khung ngẫu nhiên</td><td>224 x 224, giữ 70-100% diện tích</td><td>mô phỏng khung hình và khoảng cách chụp khác nhau</td></tr>
+        <tr><td>Lật ngang</td><td>xác suất 0.5</td><td>ảnh lật ngang vẫn là cùng một món</td></tr>
+        <tr><td>Đổi màu nhẹ</td><td>sáng, tương phản 20%; bão hòa 10%; sắc màu 0.02</td><td>mô phỏng ánh sáng khác nhau; sắc màu chỉ đổi rất ít vì màu là đặc điểm của món</td></tr>
+      </tbody>
+    </table>
+    <div class="fig"><img src="figures/fig06_augmentation.jpg" alt="Một ảnh bánh xèo và sáu phiên bản tăng cường"></div>
+    <ul class="points sm">
+      <li>Chỉ áp dụng cho train và chỉ khi fine-tune: mỗi ảnh được biến đổi ngẫu nhiên ở mỗi epoch, để mạng học đặc điểm của món thay vì học thuộc từng ảnh.</li>
+      <li>Không lật dọc hay xoay mạnh vì ảnh món ăn thật hiếm khi như vậy. Val và test luôn dùng phép biến đổi cố định.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 06 -->
+<section class="slide section" data-sec="6"></section>
+
+<section class="slide">
+  <p class="kicker">06 | Xây dựng mô hình</p>
+  <h2>Ba mô hình được so sánh</h2>
+  <div class="body">
+    <table class="sm">
+      <thead><tr><th>Mô hình</th><th>Đặc trưng</th><th>Phần được huấn luyện</th><th>Đầu phân loại</th></tr></thead>
+      <tbody>
+        <tr><td>ResNet50 trích đặc trưng</td><td>vector 2 048 chiều, ResNet50 giữ nguyên</td><td>đầu phân loại</td><td>Logistic Regression</td></tr>
+        <tr><td>ResNet50 fine-tune nhẹ</td><td>ResNet50, khối cuối <code>layer4</code> học lại</td><td><code>layer4</code> và đầu phân loại</td><td>tuyến tính 2048 x 30 + softmax</td></tr>
+        <tr><td>Baseline thủ công</td><td>histogram màu + SIFT (OpenCV)</td><td>đầu phân loại</td><td>Logistic Regression</td></tr>
+      </tbody>
+    </table>
+    <div class="row">
+      <div class="col">
+        <div class="card"><h3>ResNet50 (ImageNet, torchvision)</h3><p>Nhận ảnh 224 x 224, trả về vector 2 048 chiều. Logistic Regression nhiều lớp là một lớp tuyến tính + softmax, đúng bằng lớp cuối của ResNet50.</p></div>
+      </div>
+      <div class="col">
+        <div class="card"><h3>Baseline thủ công (ảnh 128 x 128)</h3><p>Histogram màu HSV 8 x 8 x 8 (512 chiều) + túi từ thị giác SIFT: <code>MiniBatchKMeans</code> gom vector SIFT của 2 000 ảnh train thành 256 cụm (256 chiều).</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">06 | Xây dựng mô hình</p>
+  <h2>Fine-tune nhẹ ResNet50</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig07_finetune_curves.png" alt="Hàm mất mát train và kết quả validation qua các epoch"></div>
+    <div class="row" style="flex: 0 0 auto">
+      <ul class="points sm col">
+        <li>Đóng băng mọi lớp trừ <code>layer4</code> và lớp tuyến tính 30 lớp mới: 15.0 triệu trên 23.6 triệu tham số được huấn luyện.</li>
+        <li>Adam, learning rate 0.0001 để không phá vỡ trọng số đã học, batch 64, 3 epoch, có tăng cường dữ liệu.</li>
+      </ul>
+      <ul class="points sm col">
+        <li>Macro-F1 val: 0.767, 0.817, 0.840; giữ epoch tốt nhất. Đường chấm là cách trích đặc trưng (0.694).</li>
+        <li>Ngay sau epoch đầu, mô hình đã vượt cách trích đặc trưng; val vẫn đang tăng ở epoch 3.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 07 -->
+<section class="slide section" data-sec="7"></section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>So sánh ba mô hình trên tập test</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig08_model_comparison.png" alt="Ba mô hình trên cùng tập test"></div>
+    <div class="cards">
+      <div class="card"><h3>Baseline thủ công</h3><p class="stat">0.240 <small>macro-F1</small></p></div>
+      <div class="card"><h3>ResNet50 trích đặc trưng</h3><p class="stat">0.695 <small>+45.5 điểm</small></p></div>
+      <div class="card hot"><h3>ResNet50 fine-tune nhẹ</h3><p class="stat">0.840 <small>+14.5 điểm</small></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Kết quả trên tập test và so sánh với bài báo gốc</h2>
+  <div class="body">
+    <table>
+      <thead><tr><th>Mô hình</th><th>Đặc trưng</th><th class="n">Accuracy</th><th class="n">Macro-F1</th><th class="n">Top-3</th><th class="n">Top-5</th></tr></thead>
+      <tbody>
+        <tr><td>Baseline thủ công</td><td>histogram màu + SIFT</td><td class="n">0.2522</td><td class="n">0.2400</td><td class="n">0.4544</td><td class="n">0.5683</td></tr>
+        <tr><td>ResNet50 trích đặc trưng</td><td>ResNet50 giữ nguyên</td><td class="n">0.6952</td><td class="n">0.6945</td><td class="n">0.8762</td><td class="n">0.9306</td></tr>
+        <tr class="best"><td>ResNet50 fine-tune nhẹ</td><td>layer4 học lại</td><td class="n">0.8363</td><td class="n">0.8397</td><td class="n">0.9470</td><td class="n">0.9738</td></tr>
+        <tr class="ref"><td>Bài báo gốc</td><td></td><td class="n">0.7754</td><td class="n"></td><td class="n"></td><td class="n">0.9607</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>Tập test 5 040 ảnh, dùng một lần. Thứ tự ba mô hình giống trên val.</li>
+      <li>Macro-F1 test gần như bằng val (0.8397 so với 0.8403).</li>
+      <li>Mô hình cuối cùng cao hơn bài báo gốc ở accuracy (0.8363 so với 0.7754) và top-5 (0.9738 so với 0.9607).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>F1 theo từng món</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w35">
+        <ul class="points">
+          <li>F1 trải từ 0.63 (bánh canh) đến 0.97 (bánh mì).</li>
+          <li>Ba món khó nhất: bánh canh, bánh đúc, hủ tiếu.</li>
+        </ul>
+        <p class="key"><b>Nhận xét</b>Các món khó đều thuộc nhóm món nước hoặc bánh làm từ bột gạo. Hệ số Spearman giữa số ảnh train và F1 là -0.08 (p = 0.669): món khó là món giống một món khác, không phải món ít ảnh.</p>
+      </div>
+      <div class="fig"><img src="figures/fig09_per_class_f1.png" alt="F1 của từng món trên test"></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Ma trận nhầm lẫn</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w35">
+        <ul class="points">
+          <li>Chuẩn hóa theo hàng: mỗi hàng là một món thực tế.</li>
+          <li>Số màu đỏ là các ô ngoài đường chéo từ 5% trở lên.</li>
+        </ul>
+        <p class="key"><b>Nhận xét</b>Chỉ 15 trên 870 ô ngoài đường chéo đạt từ 5% trở lên: lỗi tập trung vào một số ít cặp món.</p>
+      </div>
+      <div class="fig"><img src="figures/fig10_confusion_matrix.png" alt="Ma trận nhầm lẫn chuẩn hóa theo hàng"></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Các cặp món bị nhầm nhiều nhất</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w55">
+        <table>
+          <thead><tr><th>Món thực tế</th><th>Bị đoán thành</th><th class="n">Tỉ lệ</th><th class="n">Ngược lại</th></tr></thead>
+          <tbody>
+            <tr><td>Bánh bèo</td><td>Bánh đúc</td><td class="n">12.4%</td><td class="n">3.0%</td></tr>
+            <tr><td>Bún riêu</td><td>Bún bò Huế</td><td class="n">10.4%</td><td class="n">4.6%</td></tr>
+            <tr><td>Bánh canh</td><td>Hủ tiếu</td><td class="n">10.4%</td><td class="n">10.2%</td></tr>
+            <tr><td>Hủ tiếu</td><td>Bánh canh</td><td class="n">10.2%</td><td class="n">10.4%</td></tr>
+            <tr><td>Bún mắm</td><td>Canh chua</td><td class="n">9.0%</td><td class="n">2.4%</td></tr>
+          </tbody>
+        </table>
+        <p class="key"><b>Nhận xét</b>Năm cặp chiếm 94 trên 825 lỗi. Mọi cặp đều là hai món cùng nhóm, đúng với những nhóm món giống nhau đã thấy khi khám phá dữ liệu; bánh canh và hủ tiếu bị nhầm theo cả hai chiều.</p>
+      </div>
+      <div class="fig"><img src="figures/fig11_confused_pairs.jpg" alt="Ba lỗi của mỗi cặp nhầm nhiều nhất cạnh một ảnh đoán đúng"></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Tỉ lệ đoán sai theo nhóm ảnh</h2>
+  <div class="body">
+    <div class="row">
+      <div class="fig w60"><img src="figures/fig12_error_analysis.png" alt="Tỉ lệ đoán sai theo độ tin cậy, nhãn mâu thuẫn, độ sáng và kích thước"></div>
+      <div class="col">
+        <ul class="points sm">
+          <li><strong>Độ tin cậy:</strong> 576 ảnh dưới 0.5 sai 61.5%; 2 732 ảnh trên 0.95 (hơn nửa tập test) sai 1.9%.</li>
+          <li><strong>Nhãn mâu thuẫn:</strong> 37 ảnh test có bản sao mang nhãn khác sai 51.4%, so với 16.1%.</li>
+          <li><strong>Độ sáng, kích thước:</strong> gần như không ảnh hưởng (15.4% đến 17.5% giữa bốn nhóm độ sáng).</li>
+        </ul>
+        <p class="key"><b>Nhận xét</b>Độ tin cậy của mô hình là dấu hiệu rõ nhất để biết khi nào dự đoán có thể sai.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Các lỗi có độ tin cậy cao nhất</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col">
+        <p>16 ảnh test bị đoán sai với độ tin cậy từ 0.99 trở lên. Ít nhất 9 ảnh khớp với món được dự đoán hơn là nhãn gốc:</p>
+        <table class="xs">
+          <thead><tr><th>Nhãn gốc</th><th>Ảnh thực tế là</th></tr></thead>
+          <tbody>
+            <tr><td>Bánh cuốn, Nem chua</td><td>gỏi cuốn</td></tr>
+            <tr><td>Canh chua</td><td>cá kho tộ</td></tr>
+            <tr><td>Bún bò Huế</td><td>phở</td></tr>
+            <tr><td>Bún riêu</td><td>bún bò Huế</td></tr>
+            <tr><td>Bánh đúc</td><td>bánh giò</td></tr>
+            <tr><td>Bánh bột lọc</td><td>bánh bèo</td></tr>
+            <tr><td>Bánh khọt</td><td>bánh căn</td></tr>
+            <tr><td>Bánh tráng nướng</td><td>bánh cuốn</td></tr>
+          </tbody>
+        </table>
+        <p class="key"><b>Nhận xét</b>Phần lớn lỗi tự tin là lỗi của nhãn trong dữ liệu. Chỉ 3 trong 16 ảnh có bản sao mang nhãn khác, nên pHash không tìm được các nhãn sai này. Nhóm không sửa nhãn để giữ nguyên tập test chính thức.</p>
+      </div>
+      <div class="fig w40"><img src="figures/fig13_confident_errors.jpg" alt="Mười sáu ảnh test bị đoán sai với độ tin cậy cao nhất"></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Dự đoán ảnh mới</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w40">
+        <ul class="points">
+          <li><code>predict_image()</code> chạy cùng quy trình như khi đánh giá: đọc ảnh, đổi sang RGB, đổi kích thước, cắt giữa, chuẩn hóa, rồi mô hình cuối cùng.</li>
+          <li>Sáu ảnh test đọc từ file gốc: món đúng nằm trong ba gợi ý ở 5 trên 6 ảnh.</li>
+          <li>Khi xác suất của gợi ý đầu dưới 0.5 (nhóm sai 61.5%), ứng dụng nên hiện cả 3 gợi ý thay vì một câu trả lời.</li>
+        </ul>
+      </div>
+      <div class="fig"><img src="figures/fig14_predictions.jpg" alt="Ba gợi ý của mô hình cho sáu ảnh test"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 -->
+<section class="slide section" data-sec="8"></section>
+
+<section class="slide">
+  <p class="kicker">08 | Kết luận</p>
+  <h2>Kết luận, hạn chế và hướng mở rộng</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col">
+        <div class="card"><h3>Kết quả</h3>
+          <ul class="points sm">
+            <li>ResNet50 fine-tune nhẹ: accuracy 0.8363, macro-F1 0.8397, top-3 0.9470; cao hơn bài báo gốc (accuracy 0.7754).</li>
+            <li>Cùng đầu phân loại: đặc trưng ImageNet tăng macro-F1 từ 0.2400 lên 0.6945; fine-tune nhẹ thêm 14.5 điểm.</li>
+            <li>Lỗi tập trung ở các cặp món cùng nhóm và ở ảnh bị gán nhãn sai.</li>
+          </ul>
+        </div>
+        <div class="card"><h3>Hướng mở rộng</h3>
+          <ul class="points sm">
+            <li>Fine-tune lâu hơn hoặc mở thêm <code>layer3</code>; thử MobileNetV3 hoặc ViT-B/16.</li>
+            <li>Kiểm tra lại nhãn của các lỗi tự tin và ảnh có bản sao mang nhãn khác.</li>
+            <li>Tìm ảnh gần trùng bằng độ tương đồng của đặc trưng CNN.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card"><h3>Hạn chế</h3>
+          <ul class="points sm">
+            <li>Mỗi ảnh một nhãn, dù một số ảnh có nhiều món.</li>
+            <li>Nhãn sai vẫn còn trong val và test, nên điểm test có thể thấp hơn chất lượng thật.</li>
+            <li>pHash không tìm được hai ảnh khác nhau chụp cùng một đĩa.</li>
+            <li>Logistic Regression dùng tham số mặc định; fine-tune chỉ 3 epoch; chỉ thử một mạng pretrained.</li>
+            <li>Ảnh từ Internet thường chụp đẹp, khác ảnh chụp bằng điện thoại trong quán.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+<script src="../../assets/js/slides.js"></script>
+</body>
+</html>

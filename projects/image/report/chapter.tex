@@ -1,0 +1,343 @@
+\chapter{Nhận diện món ăn Việt Nam qua ảnh}
+
+\section{Bài toán và hướng tiếp cận}
+
+Một ứng dụng ẩm thực hoặc du lịch cho phép người dùng chụp ảnh món ăn và tự động cho biết tên món (phở, bún bò Huế,
+bánh xèo, cơm tấm, ...). Bài tập này xây dựng mô hình nhận một ảnh và dự đoán món ăn trong ảnh, trong 30 món ăn Việt
+Nam phổ biến. Vì ứng dụng có thể hiện vài gợi ý cùng lúc, ngoài accuracy và macro-F1, nhóm còn báo cáo top-3 và top-5
+accuracy: tỉ lệ ảnh có món đúng nằm trong 3 hoặc 5 dự đoán đầu tiên.
+
+Đây là bài toán phân loại ảnh có giám sát với 30 lớp. Hướng chính là học sâu với một mạng đã huấn luyện sẵn: ResNet50
+\cite{img-resnet} được dùng theo hai cách mà đề yêu cầu, trích đặc trưng (giữ nguyên mạng) và fine-tune nhẹ (học lại
+khối cuối), và được so sánh với một baseline dùng đặc trưng thủ công (histogram màu và SIFT). Cả ba mô hình có cùng một
+kiểu đầu phân loại, nên khác biệt giữa chúng chỉ đến từ đặc trưng. Quy trình gồm: đưa dữ liệu về cấu trúc thư mục chuẩn
+cho phân loại ảnh; kiểm tra chất lượng và phân tích khám phá; tiền xử lý và tăng cường dữ liệu; xây dựng ba mô hình;
+đánh giá một lần trên tập test và phân tích lỗi. Notebook chạy được trên Google Colab với \textit{Runtime > Run all}
+(cần runtime GPU).
+
+\section{Bộ dữ liệu}
+
+\begin{itemize}
+  \item \textbf{Nguồn:} bộ dữ liệu 30VNFoods \cite{img-30vnfoods}, bản gốc được đăng trên Kaggle.
+        Notebook tải bản sao công khai trên Hugging Face (\url{vuongnhathien/30VNFoods}), không cần đăng nhập.
+  \item \textbf{Giấy phép:} dữ liệu được phát hành theo giấy phép CC BY-NC-SA 4.0, chỉ dùng cho mục đích phi thương
+        mại và phải ghi nguồn. Nhóm không đưa ảnh lên repo.
+  \item \textbf{Nội dung:} ảnh chụp 30 món ăn Việt Nam thu thập từ Internet. Mỗi ảnh có một nhãn là tên món, lưu bằng tên
+        thư mục chứa ảnh (tên món viết không dấu).
+  \item \textbf{Kết quả gốc:} mô hình tốt nhất của bài báo đạt accuracy 77.54\% và top-5 accuracy 96.07\% trên tập test.
+\end{itemize}
+
+Bộ dữ liệu có 25 136 ảnh của 30 món, nhiều hơn mức tối thiểu 5 000 ảnh và 3 lớp mà đề yêu cầu cho dữ liệu ảnh, và là
+ảnh chụp thực tế chứ không phải bộ dữ liệu mẫu như MNIST hay CIFAR-10. Tác giả đã chia sẵn thành train (69.9\%), val
+(10.0\%) và test (20.1\%); nhóm giữ nguyên cách chia này để kết quả so sánh được với bài báo gốc
+(Bảng~\ref{tab:img-split}). Kích thước ảnh rất khác nhau: cạnh ngắn từ 83 đến 4 912 px, trung vị 700 px, và chỉ 9 ảnh
+có cạnh ngắn dưới mức 128 px mà đề khuyến nghị.
+
+\paragraph{Cấu trúc thư mục.} Mỗi ảnh chỉ có một nhãn, nên nhãn được lưu bằng thư mục chứa ảnh. Notebook đưa dữ liệu về
+đúng cấu trúc mà Ultralytics YOLO dùng cho bài toán phân loại: một thư mục cho mỗi tập, bên trong là một thư mục con cho
+mỗi món. File \texttt{labels.csv} liệt kê mọi ảnh với tập và nhãn của nó.
+
+\begin{verbatim}
+data/
+  train/
+    Banh beo/   1.jpg  10.jpg  ...
+    Banh bot loc/
+    ...         (30 thu muc, moi mon mot thu muc)
+  val/          (cung cau truc)
+  test/         (cung cau truc)
+  labels.csv    (path, split, label)
+\end{verbatim}
+
+\begin{table}[H]\centering
+\caption{Kích thước ba tập trước và sau khi làm sạch.}\label{tab:img-split}
+\begin{tabular}{lrrrrr}
+\toprule
+Tập & Ban đầu & Ảnh nhỏ & Ảnh trùng & Còn lại & Số ảnh mỗi món \\
+\midrule
+train & 17 581 & 5 & 361 & 17 215 & 306 - 1 047 \\
+val & 2 515 & 0 & 0 & 2 515 & 45 - 153 \\
+test & 5 040 & 0 & 0 & 5 040 & 89 - 306 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Kiểm tra chất lượng dữ liệu}
+
+Mỗi ảnh được mở một lần để ghi lại: file có đọc được không, định dạng thật theo nội dung file, chế độ màu, kích thước,
+mã băm cảm nhận (pHash) và độ bão hòa, độ sáng trung bình. Bảng~\ref{tab:img-quality} tổng hợp kết quả.
+
+\begin{table}[H]\centering
+\caption{Các vấn đề chất lượng dữ liệu và cách xử lý.}\label{tab:img-quality}
+\begin{tabular}{>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{5.2cm}}
+\toprule
+Vấn đề & Kết quả kiểm tra & Cách xử lý \\
+\midrule
+File lỗi & 0 file & nếu có thì bỏ khỏi train/val/test \\
+Định dạng khác JPEG & 129 file (PNG, MPO, BMP) có đuôi \texttt{.jpg} & giữ lại, thư viện đọc ảnh theo nội dung file \\
+Chế độ màu khác RGB & 0 ảnh & vẫn đổi sang RGB, cần cho ảnh mới \\
+Cạnh ngắn dưới 128 px & 9 ảnh (5 ở train) & bỏ khỏi train; giữ ở val/test và phóng to \\
+Kích thước khác nhau & cạnh ngắn từ 83 đến 4 912 px, trung vị 700 px & đưa về 224 x 224 \\
+Ảnh trùng giữa train và val/test & 186 cặp & bỏ khỏi train \\
+Ảnh trùng mang nhãn khác & 65 cặp & bỏ khỏi train; đánh dấu ở val/test \\
+Ảnh trùng cùng nhãn trong train & 153 cặp & giữ một bản cho mỗi nhóm, bỏ các bản còn lại khỏi train \\
+Lớp mất cân bằng & món nhiều ảnh nhất gấp 3.5 lần món ít nhất & chọn mô hình theo macro-F1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\reportfig{fig01_image_sizes.png}{Kích thước ảnh rất đa dạng nhưng phần lớn đủ lớn: cạnh ngắn trung vị 700 px, chỉ 9 ảnh
+(0.04\%) dưới 128 px và 347 ảnh (1.4\%) dưới 224 px.}{fig:img-sizes}
+
+Để tìm ảnh trùng, mỗi ảnh được tóm tắt bằng pHash, một mã 64 bit mô tả cấu trúc tổng thể của ảnh: hai bản của cùng một
+ảnh (dù đã bị nén lại, thu nhỏ hay cắt nhẹ) có mã giống hoặc gần giống nhau. Nhóm so sánh toàn bộ 315 896 680 cặp ảnh
+bằng phép XOR và đếm bit của numpy, và coi hai ảnh là trùng nếu mã của chúng khác nhau không quá 6 bit. Kết quả có 403
+cặp trùng (239 cặp trùng hoàn toàn, 164 cặp gần trùng), liên quan đến 757 ảnh (3.0\% bộ dữ liệu).
+
+\reportfig{fig02_duplicate_pairs.jpg}{Ví dụ các cặp ảnh trùng. Bốn cặp đầu (tên màu đỏ) là cùng một ảnh nhưng được xếp
+vào hai món khác nhau, như bánh bèo và bánh bột lọc; hai cặp tiếp theo có bản sao ở cả train lẫn validation hoặc test;
+hai cặp cuối là ảnh gần trùng trong train.}{fig:img-dups}
+
+\section{Phân tích khám phá dữ liệu}
+
+Phân tích khám phá chỉ dùng tập train, trừ Hình~\ref{fig:img-classes} so sánh ba tập.
+
+\reportfig{fig03_class_counts.png}{Số ảnh của mỗi món theo tập. Bún bò Huế có nhiều ảnh train nhất (1 071 ảnh), bánh pía
+ít nhất (310 ảnh), chênh 3.5 lần; ba tập giữ cùng tỉ lệ giữa các món.}{fig:img-classes}
+
+Mất cân bằng chỉ ở mức vừa phải và món ít ảnh nhất vẫn có hơn 300 ảnh train, nên nhóm giữ mọi món, không lấy mẫu lại và
+không dùng trọng số lớp, nhưng vẫn chọn mô hình theo macro-F1 để mọi món có trọng số như nhau.
+
+\reportfig{fig04_sample_grid.jpg}{Bốn ảnh train ngẫu nhiên của mỗi món. Ảnh được chụp từ nhiều góc, nhiều kiểu bày đĩa và
+điều kiện ánh sáng khác nhau. Nhiều món rất giống nhau, như các món nước (phở, bún bò Huế, hủ tiếu, bún riêu, bánh canh)
+hay các loại bánh làm từ bột gạo (bánh bèo, bánh đúc, bánh bột lọc).}{fig:img-samples}
+
+\reportfig{fig05_colour_stats.png}{Độ bão hòa và độ sáng trung bình của ảnh theo món. Trung vị độ bão hòa của các món chỉ
+trải từ 0.33 (cháo lòng) đến 0.52 (bánh xèo), trong khi khoảng tứ phân vị bên trong một món trung bình đã rộng 0.16, nên
+màu sắc tổng thể khó đủ để phân biệt 30 món.}{fig:img-colour}
+
+\section{Tiền xử lý và tăng cường dữ liệu}
+
+Validation và test không bị bỏ ảnh nào, để giữ nguyên cách chia chính thức; mọi thống kê học từ dữ liệu chỉ được fit
+trên train.
+
+\begin{enumerate}
+  \item Làm sạch train: bỏ 5 ảnh có cạnh ngắn dưới 128 px, 182 ảnh trùng với validation hoặc test, 35 ảnh trùng mang nhãn
+        khác và 144 ảnh lặp lại cùng nhãn; train còn 17 215 ảnh. Ảnh validation và test được đánh dấu nếu có bản gần trùng
+        trong train trước khi làm sạch (123 ảnh test) hoặc có bản sao mang nhãn khác (37 ảnh test).
+  \item Mã hóa nhãn bằng \texttt{LabelEncoder}: 30 tên món thành số nguyên 0-29.
+  \item Thu nhỏ một lần và lưu lại: ResNet50 nhận ảnh 224 x 224 px, trong khi ảnh gốc có cạnh ngắn trung vị 700 px, và
+        giải mã ảnh JPEG lớn ở mọi epoch rất chậm. Mọi ảnh được thu nhỏ để cạnh ngắn bằng 256 px (giữ tỉ lệ) và lưu vào
+        \texttt{data/processed/} cùng cấu trúc thư mục; mọi mô hình đọc ảnh từ đây, ảnh gốc không bị thay đổi.
+  \item Đưa ảnh vào mạng: đổi kích thước để cạnh ngắn bằng 256 px (ảnh nhỏ hơn được phóng to), cắt phần giữa
+        224 x 224 px, chuẩn hóa từng kênh màu theo trung bình và độ lệch chuẩn của ImageNet. Ảnh luôn được cắt thành hình
+        vuông nên không cần thêm viền.
+  \item Chuẩn hóa vector đặc trưng trước Logistic Regression: chuẩn hóa L2 với đặc trưng ResNet50 (đưa mỗi vector về độ
+        dài 1), \texttt{StandardScaler} với đặc trưng thủ công (vì hai phần của vector có thang đo khác nhau).
+\end{enumerate}
+
+\paragraph{Tăng cường dữ liệu.} Mỗi ảnh train được biến đổi ngẫu nhiên ở mỗi epoch, để mạng thấy nhiều phiên bản khác
+nhau của cùng một ảnh, học những đặc điểm không đổi của món ăn thay vì học thuộc từng ảnh
+(Bảng~\ref{tab:img-aug}). Tăng cường chỉ áp dụng cho train và chỉ khi trọng số của mạng được huấn luyện (fine-tune);
+validation và test luôn dùng phép biến đổi cố định để điểm số không phụ thuộc vào yếu tố ngẫu nhiên. Ở cách trích đặc
+trưng, mạng không được huấn luyện nên mỗi ảnh chỉ đi qua mạng một lần.
+
+\begin{table}[H]\centering
+\caption{Các phép tăng cường dữ liệu và mục tiêu.}\label{tab:img-aug}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{6.4cm}}
+\toprule
+Phép biến đổi & Tham số & Mục tiêu \\
+\midrule
+Cắt khung ngẫu nhiên & 224 x 224, giữ 70-100\% diện tích & mô phỏng khung hình và khoảng cách chụp khác nhau; món ăn vẫn nằm trong khung \\
+Lật ngang & xác suất 0.5 & ảnh lật ngang vẫn là cùng một món \\
+Đổi màu nhẹ & độ sáng, tương phản $\pm$20\%; độ bão hòa $\pm$10\%; sắc màu $\pm$0.02 & mô phỏng ánh sáng khác nhau; sắc màu chỉ đổi rất ít vì màu là đặc điểm thật của món \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Không lật dọc hay xoay mạnh, vì ảnh món ăn thật hiếm khi bị như vậy.
+
+\reportfig{fig06_augmentation.jpg}{Một ảnh train của món bánh xèo và sáu phiên bản tăng cường ngẫu nhiên: món ăn và màu
+sắc của nó vẫn nhận ra được.}{fig:img-aug}
+
+\section{Xây dựng mô hình}
+
+Nhóm dùng ResNet50 với trọng số ImageNet của torchvision \cite{img-resnet}, một trong các mạng đề gợi ý. Mạng được coi
+như một hàm có sẵn: nhận ảnh 224 x 224 và trả về một vector 2 048 chiều mô tả nội dung ảnh; lớp cuối biến vector này
+thành xác suất của từng lớp. Ba mô hình được xây dựng (Bảng~\ref{tab:img-models}). Logistic Regression nhiều lớp là một
+lớp tuyến tính cộng softmax, đúng bằng lớp cuối của ResNet50, nên cả ba mô hình có cùng một kiểu đầu phân loại và chỉ
+khác nhau ở đặc trưng. Mô hình được huấn luyện trên train đã làm sạch và chọn theo macro-F1 trên validation; tập test
+chỉ dùng một lần. Logistic Regression dùng tham số mặc định của scikit-learn.
+
+\begin{table}[H]\centering
+\caption{Ba mô hình được so sánh.}\label{tab:img-models}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.2cm}}
+\toprule
+Mô hình & Đặc trưng & Phần được huấn luyện & Đầu phân loại \\
+\midrule
+ResNet50 trích đặc trưng & vector 2 048 chiều của ResNet50 giữ nguyên & đầu phân loại & Logistic Regression \\
+ResNet50 fine-tune nhẹ & ResNet50, khối cuối \texttt{layer4} học lại & \texttt{layer4} và đầu phân loại & tuyến tính 2048 $\rightarrow$ 30 + softmax \\
+Baseline thủ công & histogram màu + SIFT (OpenCV) & đầu phân loại & Logistic Regression \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{ResNet50 làm bộ trích đặc trưng}
+
+ResNet50 bỏ lớp phân loại cuối và giữ nguyên toàn bộ trọng số; mỗi ảnh đi qua mạng một lần và trở thành một vector
+2 048 chiều, rồi Logistic Regression được huấn luyện trên vector của tập train. Chỉ huấn luyện đầu phân loại đã đạt
+macro-F1 validation 0.694 và top-3 0.873, trong khi đoán ngẫu nhiên chỉ đạt khoảng 0.033.
+
+\subsection{Fine-tune nhẹ ResNet50}
+
+Bắt đầu từ cùng ResNet50, lớp cuối được thay bằng một lớp tuyến tính 30 lớp mới; mọi lớp trừ khối cuối \texttt{layer4}
+và lớp mới bị đóng băng (15.0 triệu trên 23.6 triệu tham số được huấn luyện). Mạng được huấn luyện 3 epoch bằng Adam với
+learning rate nhỏ ($10^{-4}$) để không phá vỡ trọng số đã học, batch 64, có tăng cường dữ liệu, và epoch có macro-F1
+validation cao nhất được giữ lại.
+
+\reportfig{fig07_finetune_curves.png}{Hàm mất mát train và kết quả validation qua các epoch. Macro-F1 validation tăng từ
+0.767 lên 0.817 rồi 0.840; đường chấm là macro-F1 của cách trích đặc trưng (0.694).}{fig:img-ft}
+
+Sau fine-tune, macro-F1 validation là 0.840, cao hơn cách trích đặc trưng 14.6 điểm; ngay sau epoch đầu tiên mô hình đã
+vượt cách trích đặc trưng. Validation vẫn đang tăng ở epoch 3, nên huấn luyện thêm có thể còn cải thiện.
+
+\subsection{Baseline: đặc trưng thủ công}
+
+Để biết mạng học sẵn đóng góp bao nhiêu, cùng một Logistic Regression được huấn luyện trên đặc trưng thiết kế bằng tay,
+tính trên ảnh 128 x 128 px:
+
+\begin{itemize}
+  \item \textbf{Histogram màu} trong không gian HSV (OpenCV, 8 x 8 x 8 = 512 chiều): trên đĩa có những màu nào.
+  \item \textbf{SIFT} (OpenCV): tìm các điểm nổi bật và mô tả vùng quanh mỗi điểm bằng một vector 128 chiều về hướng của
+        các cạnh. Vì mỗi ảnh có số điểm khác nhau, nhóm dùng \textit{túi từ thị giác}: \texttt{MiniBatchKMeans} của
+        scikit-learn gom các vector SIFT của 2 000 ảnh train thành 256 cụm, và mỗi ảnh được mô tả bằng tỉ lệ điểm rơi vào
+        từng cụm (256 chiều).
+\end{itemize}
+
+Baseline đạt macro-F1 validation 0.241, cao hơn đoán ngẫu nhiên nhưng thấp hơn ResNet50 trích đặc trưng gần 3 lần: màu
+sắc và hình dạng cục bộ không đủ để phân biệt các món có màu và cách bày giống nhau. Theo cách chọn mô hình,
+\textbf{ResNet50 fine-tune nhẹ} (macro-F1 validation 0.840) là mô hình cuối cùng.
+
+\section{Đánh giá trên tập test}
+
+\begin{table}[H]\centering
+\caption{Kết quả trên tập test (5 040 ảnh). Hàng in đậm là mô hình cuối cùng, chọn theo macro-F1 validation.}\label{tab:img-test}
+\small
+\begin{tabular}{llrrrr}
+\toprule
+Mô hình & Đặc trưng & Accuracy & Macro-F1 & Top-3 & Top-5 \\
+\midrule
+Baseline thủ công & histogram màu + SIFT & 0.2522 & 0.2400 & 0.4544 & 0.5683 \\
+ResNet50 trích đặc trưng & ResNet50 giữ nguyên & 0.6952 & 0.6945 & 0.8762 & 0.9306 \\
+\textbf{ResNet50 fine-tune nhẹ} & \textbf{layer4 học lại} & \textbf{0.8363} & \textbf{0.8397} & \textbf{0.9470} & \textbf{0.9738} \\
+\midrule
+Bài báo gốc & & 0.7754 & & & 0.9607 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Mô hình cuối cùng đạt accuracy 0.8363 và top-5 0.9738, cao hơn bài báo gốc (0.7754 và 0.9607). Thứ tự ba mô hình trên
+test giống trên validation, và macro-F1 trên test gần như bằng trên validation (0.8397 so với 0.8403).
+
+\reportfig{fig08_model_comparison.png}{Ba mô hình trên cùng tập test, cùng một kiểu đầu phân loại. Macro-F1 tăng từ 0.240
+(đặc trưng thủ công) lên 0.695 (ResNet50 trích đặc trưng, +45.5 điểm) và 0.840 (fine-tune nhẹ, thêm 14.5
+điểm).}{fig:img-features}
+
+\reportfig{fig09_per_class_f1.png}{F1 của từng món trên test. F1 trải từ 0.63 (bánh canh) đến 0.97 (bánh mì); ba món khó
+nhất (bánh canh, bánh đúc, hủ tiếu) đều thuộc nhóm món nước hoặc bánh làm từ bột gạo.}{fig:img-perclass}
+
+\reportfig{fig10_confusion_matrix.png}{Ma trận nhầm lẫn chuẩn hóa theo hàng. Số màu đỏ là 15 ô ngoài đường chéo từ 5\%
+trở lên, trên tổng số 870 ô: lỗi tập trung vào một số cặp món.}{fig:img-cm}
+
+\subsection{Những món nào hay bị nhầm với nhau?}
+
+\begin{table}[H]\centering
+\caption{Năm cặp món bị nhầm nhiều nhất (tỉ lệ trên số ảnh test của món thực tế).}\label{tab:img-pairs}
+\begin{tabular}{llrrr}
+\toprule
+Món thực tế & Bị đoán thành & Tỉ lệ & Số ảnh & Chiều ngược lại \\
+\midrule
+Bánh bèo & Bánh đúc & 12.4\% & 16 & 3.0\% \\
+Bún riêu & Bún bò Huế & 10.4\% & 24 & 4.6\% \\
+Bánh canh & Hủ tiếu & 10.4\% & 20 & 10.2\% \\
+Hủ tiếu & Bánh canh & 10.2\% & 20 & 10.4\% \\
+Bún mắm & Canh chua & 9.0\% & 14 & 2.4\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\reportfig{fig11_confused_pairs.jpg}{Ba lỗi của mỗi cặp nhầm nhiều nhất (đỏ) cạnh một ảnh đoán đúng của món bị đoán
+nhầm sang (xanh).}{fig:img-pairs}
+
+Năm cặp này chiếm 94 trên 825 lỗi. Mọi cặp đều là hai món cùng nhóm: bánh làm từ bột gạo hoặc món nước, đúng với những
+nhóm món giống nhau đã thấy khi phân tích khám phá. Bánh canh và hủ tiếu bị nhầm theo cả hai chiều với tỉ lệ gần bằng
+nhau.
+
+\subsection{Mô hình sai ở đâu?}
+
+\reportfig{fig12_error_analysis.png}{Tỉ lệ đoán sai trên test theo độ tin cậy của mô hình, theo việc ảnh có bản sao mang
+nhãn khác, theo độ sáng và theo kích thước ảnh. Tỉ lệ sai chung là 16.4\%.}{fig:img-errors}
+
+\begin{itemize}
+  \item \textbf{Độ tin cậy} là dấu hiệu rõ nhất: ảnh có xác suất dưới 0.5 sai 61.5\% (576 ảnh), còn ảnh có xác suất trên
+        0.95 chỉ sai 1.9\% (2 732 ảnh, hơn một nửa tập test).
+  \item \textbf{Nhãn mâu thuẫn:} 37 ảnh test có bản sao mang nhãn khác bị đoán sai 51.4\%, so với 16.1\% ở các ảnh còn lại;
+        với những ảnh này, nhãn trong dữ liệu có thể chính là chỗ sai.
+  \item \textbf{Độ sáng và kích thước} gần như không ảnh hưởng: tỉ lệ sai từ 15.4\% đến 17.5\% giữa bốn nhóm độ sáng, và
+        không có xu hướng rõ theo kích thước ảnh.
+  \item \textbf{Số ảnh train:} hệ số tương quan Spearman giữa số ảnh train và F1 của từng món là -0.08 (p = 0.669). Món khó
+        là món giống một món khác, không phải món ít ảnh.
+\end{itemize}
+
+\reportfig{fig13_confident_errors.jpg}{Mười sáu ảnh test bị đoán sai với độ tin cậy cao nhất (từ 0.99 trở lên); 3 ảnh
+mang dấu \texttt{[trùng]}, tức có bản sao mang nhãn khác. Độ tin cậy trung vị là 0.54 với ảnh đoán sai và 0.98 với ảnh
+đoán đúng.}{fig:img-confident}
+
+\paragraph{Lỗi tự tin là lỗi của nhãn.} Khi mô hình rất chắc chắn mà vẫn sai, nhóm xem lại chính nhãn của ảnh. Trong 16
+ảnh ở Hình~\ref{fig:img-confident}, ít nhất 9 ảnh khớp với món mô hình dự đoán hơn là nhãn gốc: hai ảnh gắn nhãn bánh
+cuốn và nem chua là gỏi cuốn, ảnh gắn nhãn canh chua là cá kho tộ, ảnh gắn nhãn bún bò Huế là phở, ảnh gắn nhãn bún
+riêu là bún bò Huế, ảnh gắn nhãn bánh đúc là bánh giò, ảnh gắn nhãn bánh bột lọc là bánh bèo, ảnh gắn nhãn bánh khọt là
+bánh căn và ảnh gắn nhãn bánh tráng nướng là bánh cuốn. Chỉ 3 trong 16 ảnh có bản sao mang nhãn khác, nên phần lớn nhãn
+sai này không tìm được bằng cách tìm ảnh trùng. Nhãn sai trong tập test làm điểm test thấp hơn chất lượng thật của mô
+hình; nhóm không sửa nhãn để giữ nguyên tập test chính thức.
+
+\section{Dự đoán ảnh mới}
+
+Hàm \texttt{predict\_image()} chạy toàn bộ quy trình trên một file ảnh bất kỳ: đọc ảnh, đổi sang RGB, cùng phép biến đổi
+kích thước và chuẩn hóa, rồi mô hình cuối cùng, và trả về 3 món có xác suất cao nhất. Khi xác suất của gợi ý đầu tiên
+thấp (dưới 0.5), ứng dụng nên hiện cả 3 gợi ý thay vì một câu trả lời.
+
+\reportfig{fig14_predictions.jpg}{Ba gợi ý của mô hình cho sáu ảnh test đọc từ file gốc, gồm bốn ảnh đoán đúng và hai ảnh
+đoán sai (tên màu đỏ). Món đúng nằm trong ba gợi ý ở 5 trên 6 ảnh.}{fig:img-predict}
+
+\section{Kết luận}
+
+Mô hình cuối cùng, ResNet50 với khối cuối được fine-tune nhẹ, đạt accuracy 0.8363, macro-F1 0.8397 và top-3 0.9470
+trên tập test, cao hơn bài báo gốc (accuracy 0.7754). Với cùng một kiểu đầu phân loại, đặc trưng học sẵn từ ImageNet là
+bước tiến lớn nhất so với đặc trưng thủ công (macro-F1 từ 0.2400 lên 0.6945), và fine-tune nhẹ khối cuối cải thiện thêm
+14.5 điểm. Lỗi tập trung ở các cặp món cùng nhóm và ở các ảnh bị gán nhãn sai trong dữ liệu.
+
+\subsection*{Hạn chế}
+\begin{itemize}
+  \item Mỗi ảnh chỉ có một nhãn, trong khi một số ảnh có nhiều món; các biến thể vùng miền của một món được gộp chung.
+  \item Nhãn sai vẫn còn trong val và test: 37 ảnh test có bản sao mang nhãn khác, và ít nhất 9 trong 16 lỗi tự tin
+        nhất là ảnh bị gán nhãn sai. Nhóm không sửa nhãn, nên điểm test có thể thấp hơn chất lượng thật của mô hình.
+  \item pHash chỉ tìm được bản sao của cùng một ảnh, không tìm được hai ảnh khác nhau chụp cùng một đĩa.
+  \item Logistic Regression dùng tham số mặc định; fine-tune chỉ chạy 3 epoch trong khi validation vẫn đang tăng.
+  \item Chỉ một mạng pretrained (ResNet50) được thử.
+  \item Ảnh lấy từ Internet thường được chụp đẹp, khác ảnh chụp bằng điện thoại trong quán ăn.
+\end{itemize}
+
+\subsection*{Hướng mở rộng}
+Fine-tune lâu hơn hoặc mở thêm \texttt{layer3}; thử các mạng khác như MobileNetV3 (nhẹ hơn, để chạy trên điện thoại) hoặc
+ViT-B/16; kiểm tra lại nhãn của các ảnh mô hình đoán sai với độ tin cậy cao và các ảnh có bản sao mang nhãn khác, rồi
+sửa hoặc bỏ chúng; tìm ảnh gần trùng bằng độ tương đồng
+của đặc trưng CNN, ngoài pHash.
+
+\begin{thebibliography}{9}
+\raggedright
+\bibitem{img-30vnfoods} T.-H. Do, D.-D.-A. Nguyen, H.-Q. Dang, H.-N. Nguyen, P.-P. Pham, D.-T. Nguyen.
+  \textit{30VNFoods: A Dataset for Vietnamese Foods Recognition}. 2021 IEEE International Conference on Communication,
+  Networks and Satellite (COMNETSAT), 2021. DOI: \url{10.1109/COMNETSAT53002.2021.9530774}.
+\bibitem{img-resnet} K. He, X. Zhang, S. Ren, J. Sun. \textit{Deep Residual Learning for Image Recognition}. IEEE
+  Conference on Computer Vision and Pattern Recognition (CVPR), 2016.
+\end{thebibliography}

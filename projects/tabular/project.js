@@ -1,0 +1,26 @@
+window.G1.projects.push({
+  id: "tabular",
+  type: "Tabular",
+  title: "Tabular project title (placeholder)",
+  summary: "Placeholder summary of the tabular data project, about two lines long on the card.",
+  problem: "Placeholder problem statement. The real text will describe the context, the questions to answer, the evaluation metric and the chosen approach.",
+  dataset: {
+    name: "Tabular dataset (placeholder)",
+    url: "https://example.com/dataset",
+    samples: "Placeholder: train / validation / test sizes",
+    features: "Placeholder: columns and labels",
+    description: "Placeholder description of the dataset: source, licence, main data quality issues and how they are handled.",
+  },
+  workflow: [
+    { title: "Load and check the data", detail: "Placeholder description of this step." },
+    { title: "Exploratory analysis", detail: "Placeholder description of this step." },
+    { title: "Preprocessing", detail: "Placeholder description of this step." },
+    { title: "Modelling", detail: "Placeholder description of this step." },
+    { title: "Evaluation", detail: "Placeholder description of this step." },
+  ],
+  owners: ["Phan Thị Minh Thơ"],
+  status: "planned",
+  links: { notebook: null, report: null, slides: null, video: null },
+  results: null,
+  questions: null,
+});

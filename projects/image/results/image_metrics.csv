@@ -1,0 +1,4 @@
+role,model,final,val_macro_f1,test_acc,test_macro_f1,test_top3,test_top5
+handcrafted,Handcrafted (colour histogram + SIFT) + Logistic Regression,False,0.2405,0.2522,0.24,0.4544,0.5683
+feature_extractor,ResNet50 frozen + Logistic Regression,False,0.6942,0.6952,0.6945,0.8762,0.9306
+finetune,ResNet50 fine-tune,True,0.8403,0.8363,0.8397,0.947,0.9738

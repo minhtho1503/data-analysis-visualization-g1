@@ -1,0 +1,22 @@
+# Data
+data/
+notebooks/data/
+*.zip
+*.parquet
+
+# Python
+__pycache__/
+*.py[oc]
+.ipynb_checkpoints/
+.venv/
+build/
+dist/
+*.egg-info
+
+# LaTeX tools and build output
+.tools/
+.build/
+
+# Local only
+backup/
+

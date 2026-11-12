@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slides | Text | Group G1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/slides.css">
+</head>
+<body data-deck="G1 | Phân loại phản hồi của sinh viên">
+<main class="deck">
+
+<section class="slide dark">
+  <div class="bars" aria-hidden="true"><i></i><i></i><i></i></div>
+  <p class="kicker">CO5177 | Nhóm G1 | Dữ liệu văn bản</p>
+  <div class="title-in">
+    <h1>Phân loại phản hồi của sinh viên theo cảm xúc và chủ đề</h1>
+  </div>
+  <div class="title-meta">
+    <div><b>Thực hiện</b>Nguyễn Thị Thu An (2470315)</div>
+    <div><b>Môn học</b>Nền tảng lập trình cho phân tích và trực quan dữ liệu</div>
+    <div><b>Giảng viên</b>TS. Lê Thành Sách</div>
+    <div><b>Học kỳ</b>HK261</div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">Nội dung</p>
+  <h2>Nội dung trình bày</h2>
+  <div class="body">
+    <ol class="toc">
+      <li><div><h3>Bài toán và hướng tiếp cận</h3><p>Trường hợp sử dụng, thước đo, quy trình chung, biểu diễn câu</p></div></li>
+      <li><div><h3>Bộ dữ liệu</h3><p>UIT-VSFC, quy tắc gán nhãn, cách chia</p></div></li>
+      <li><div><h3>Kiểm tra chất lượng dữ liệu</h3><p>Giá trị thiếu, câu trùng, token đặc biệt, viết tắt</p></div></li>
+      <li><div><h3>Khám phá dữ liệu</h3><p>Phân phối nhãn, cảm xúc theo chủ đề, độ dài câu, từ vựng</p></div></li>
+      <li><div><h3>Tiền xử lý dữ liệu</h3><p>Làm sạch, tách từ, mã hóa nhãn, TF-IDF</p></div></li>
+      <li><div><h3>Xây dựng mô hình</h3><p>Ba bộ phân lớp trên TF-IDF, embedding tiếng Việt</p></div></li>
+      <li><div><h3>Đánh giá và phân tích lỗi</h3><p>Kết quả trên test, so sánh với bài báo, từ quan trọng, lỗi</p></div></li>
+      <li><div><h3>Kết luận</h3><p>Kết quả chính, hạn chế, hướng mở rộng</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 01 -->
+<section class="slide section" data-sec="1"></section>
+
+<section class="slide">
+  <p class="kicker">01 | Bài toán và hướng tiếp cận</p>
+  <h2>Bài toán: phân loại phản hồi của sinh viên</h2>
+  <div class="body">
+    <div class="pipe">
+      <div class="node">
+        <svg width="70" height="84" viewBox="0 0 84 100" fill="none" stroke="#121314" stroke-width="2.5" aria-hidden="true"><rect x="4" y="4" width="76" height="92" rx="4"/><path d="M16 22h52M16 38h52M16 54h36"/><path d="M16 72h10l6 8 12-16"/></svg>
+        <p>Sinh viên viết<br>phản hồi cuối kỳ</p>
+      </div>
+      <div class="arr"><span>câu</span></div>
+      <div class="node" style="width: 260px"><h3>Câu phản hồi</h3><p class="lead">"gv dạy ko hiểu gì cả, nói quá nhanh"</p></div>
+      <div class="arr"></div>
+      <div class="node dark"><h3>Mô hình</h3><p>phân loại<br>văn bản</p></div>
+      <div class="arr"><span>2 nhãn</span></div>
+      <div class="node hot"><h3>Kết quả</h3><p>cảm xúc: <strong>negative</strong></p><p>chủ đề: <strong>lecturer</strong></p></div>
+    </div>
+    <div class="row" style="flex: 0 0 auto">
+      <div class="col">
+        <p>Mỗi học kỳ trường nhận hàng nghìn ý kiến tự do; đọc và phân loại thủ công tốn nhiều thời gian. Mỗi câu được gán hai nhãn, mỗi nhãn một mô hình riêng:</p>
+        <ul class="points sm">
+          <li><code>sentiment</code> (nhiệm vụ chính): <code>negative</code>, <code>neutral</code>, <code>positive</code></li>
+          <li><code>topic</code> (nhiệm vụ phụ): <code>lecturer</code>, <code>program</code>, <code>facility</code>, <code>others</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card"><h3>Accuracy</h3><p>Tỉ lệ câu được gán đúng nhãn.</p></div>
+      <div class="card hot"><h3>Macro-F1</h3><p>Trung bình F1 của các lớp, mỗi lớp trọng số như nhau. Dùng để chọn mô hình.</p></div>
+      <div class="card"><h3>Weighted-F1</h3><p>F1 có trọng số theo số câu của lớp; dùng để so sánh với bài báo gốc.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">01 | Bài toán và hướng tiếp cận</p>
+  <h2>Hướng tiếp cận chung</h2>
+  <div class="body">
+    <div class="pipe">
+      <div class="node" style="width: 200px"><h3>Dữ liệu có nhãn</h3><p>câu + <code>sentiment</code> + <code>topic</code></p><p>train / val / test</p></div>
+      <div class="arr"></div>
+      <div class="node" style="width: 190px"><h3>Biểu diễn</h3><p>câu thành vector: TF-IDF hoặc embedding</p></div>
+      <div class="arr"><span>train</span></div>
+      <div class="node dark" style="width: 190px"><h3>Huấn luyện</h3><p>bộ phân lớp học trên train</p></div>
+      <div class="arr"><span>val</span></div>
+      <div class="node" style="width: 180px"><h3>Chọn mô hình</h3><p>macro-F1 cao nhất trên val</p></div>
+      <div class="arr"><span>test</span></div>
+      <div class="node hot" style="width: 170px"><h3>Đánh giá</h3><p>một lần trên test</p></div>
+    </div>
+    <ul class="points">
+      <li><strong>Bộ phân lớp:</strong> so sánh Naive Bayes, Logistic Regression và LinearSVC của scikit-learn trên cùng đặc trưng TF-IDF.</li>
+      <li><strong>Biểu diễn:</strong> giữ bộ phân lớp tốt nhất, thay TF-IDF bằng embedding câu tiếng Việt để xem cách biểu diễn có giúp ích không.</li>
+      <li><strong>Mất cân bằng nhãn:</strong> chọn mô hình theo macro-F1; Logistic Regression và LinearSVC dùng <code>class_weight="balanced"</code>.</li>
+      <li><strong>Tập test</strong> chỉ được dùng sau khi đã chọn xong mô hình, để điểm số phản ánh đúng câu chưa từng thấy.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">01 | Bài toán và hướng tiếp cận</p>
+  <h2>Biểu diễn câu: TF-IDF và embedding</h2>
+  <div class="body">
+    <p>Bộ phân lớp chỉ làm việc với số, nên mỗi câu được biến thành một vector. Ví dụ với câu train <em>"nhiệt tình giảng dạy , gần gũi với sinh viên ."</em></p>
+    <div class="row">
+      <div class="col">
+        <div class="card"><h3>TF-IDF (unigram + bigram)</h3>
+          <p>Sau khi tách từ: <code>nhiệt_tình giảng_dạy gần_gũi với sinh_viên</code></p>
+          <div class="bars-k wide" style="margin-top: 12px">
+            <div class="kbar"><span></span><span>giảng_dạy gần_gũi</span><i style="width: 58%"></i><span class="n">0.578</span></div>
+            <div class="kbar"><span></span><span>gần_gũi với</span><i style="width: 40%"></i><span class="n">0.402</span></div>
+            <div class="kbar"><span></span><span>nhiệt_tình giảng_dạy</span><i style="width: 38%"></i><span class="n">0.381</span></div>
+            <div class="kbar"><span></span><span>gần_gũi</span><i style="width: 36%"></i><span class="n">0.361</span></div>
+            <div class="kbar"><span></span><span>với sinh_viên</span><i style="width: 28%"></i><span class="n">0.278</span></div>
+            <div class="kbar"><span></span><span>giảng_dạy</span><i style="width: 22%"></i><span class="n">0.218</span></div>
+            <div class="kbar"><span></span><span>với</span><i style="width: 22%"></i><span class="n">0.218</span></div>
+            <div class="kbar"><span></span><span>nhiệt_tình</span><i style="width: 18%"></i><span class="n">0.177</span></div>
+            <div class="kbar"><span></span><span>sinh_viên</span><i style="width: 16%"></i><span class="n">0.160</span></div>
+          </div>
+          <p class="note" style="margin-top: 10px">Vector 13 025 chiều, chỉ 9 giá trị khác 0. Từ phổ biến (<em>sinh_viên</em>) có trọng số thấp, cụm hiếm hơn có trọng số cao.</p>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card"><h3>Embedding câu tiếng Việt</h3>
+          <p>Câu sau khi làm sạch (chưa tách từ) đi qua mô hình <code>AITeamVN/Vietnamese_Embedding</code> (fine-tune từ BGE-M3).</p>
+          <ul class="points sm" style="margin-top: 12px">
+            <li>Vector dày 1 024 chiều; mỗi chiều không ứng với một từ cụ thể.</li>
+            <li>Hai câu cùng nghĩa có vector gần nhau, kể cả khi dùng từ khác nhau.</li>
+            <li>Mô hình được dùng như một hàm trích đặc trưng có sẵn, không fine-tune thêm.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="slide section" data-sec="2"></section>
+
+<section class="slide">
+  <p class="kicker">02 | Bộ dữ liệu</p>
+  <h2>Bộ dữ liệu UIT-VSFC</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w45">
+        <ul class="points sm">
+          <li><strong>Nguồn:</strong> Nguyen et al., KSE 2018; Hugging Face <code>uitnlp/vietnamese_students_feedback</code>.</li>
+          <li><strong>Nội dung:</strong> khảo sát cuối học kỳ tại ĐH Công nghệ Thông tin (ĐHQG-HCM), năm học 2014-2015 đến 2016-2017, gán nhãn thủ công.</li>
+          <li><strong>Quy tắc gán nhãn:</strong> <code>negative</code> gồm cả phàn nàn lẫn đề nghị cải thiện; <code>neutral</code> là câu không nêu ý kiến.</li>
+          <li><strong>Độ đồng thuận</strong> giữa người gán nhãn: 91.2% với cảm xúc, 71.07% với chủ đề.</li>
+        </ul>
+        <table class="sm">
+          <thead><tr><th>Tập</th><th class="n">Số câu</th><th class="n">Tỉ lệ</th><th class="n">neutral</th></tr></thead>
+          <tbody>
+            <tr><td>train</td><td class="n">11 426</td><td class="n">70.6%</td><td class="n">4.0%</td></tr>
+            <tr><td>val</td><td class="n">1 583</td><td class="n">9.8%</td><td class="n">4.6%</td></tr>
+            <tr><td>test</td><td class="n">3 166</td><td class="n">19.6%</td><td class="n">5.3%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col">
+        <table class="sm">
+          <thead><tr><th>Câu trong train</th><th>sentiment</th><th>topic</th></tr></thead>
+          <tbody>
+            <tr><td>dạy dễ hiểu , gần gũi sinh viên .</td><td>positive</td><td>lecturer</td></tr>
+            <tr><td>cô dạy hơi khó hiểu .</td><td>negative</td><td>lecturer</td></tr>
+            <tr><td>giáo trình tốt , kiến thức trọng tâm .</td><td>positive</td><td>program</td></tr>
+            <tr><td>sắp xếp lịch học bù chưa hợp lý .</td><td>negative</td><td>program</td></tr>
+            <tr><td>chất lượng phòng thực hành quá kém .</td><td>negative</td><td>facility</td></tr>
+            <tr><td>đề nghị trang bị loa và micro mới .</td><td>negative</td><td>facility</td></tr>
+            <tr><td>mong được làm việc với thầy nhiều hơn .</td><td>neutral</td><td>lecturer</td></tr>
+            <tr><td>không có điểm nào không hài lòng .</td><td>neutral</td><td>others</td></tr>
+          </tbody>
+        </table>
+        <p class="note">Văn bản đã được tác giả viết thường, tách dấu câu và ẩn danh tên giảng viên. Lời đề nghị (<em>đề nghị trang bị ...</em>) được gán <code>negative</code>. Nhóm giữ nguyên cách chia của tác giả để so sánh được với bài báo gốc.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 -->
+<section class="slide section" data-sec="3"></section>
+
+<section class="slide">
+  <p class="kicker">03 | Kiểm tra chất lượng dữ liệu</p>
+  <h2>Giá trị thiếu, Unicode, câu trùng và rò rỉ giữa các tập</h2>
+  <div class="body">
+    <table>
+      <thead><tr><th>Kiểm tra</th><th>Kết quả</th><th>Cách xử lý</th></tr></thead>
+      <tbody>
+        <tr><td>Giá trị thiếu, câu rỗng</td><td>0 câu</td><td>nếu có thì bỏ khỏi train/val/test</td></tr>
+        <tr><td>Unicode không ở dạng NFC</td><td>0 câu</td><td>vẫn chuẩn hóa NFC, cần cho câu mới</td></tr>
+        <tr><td>Câu trùng trong train</td><td>1 câu, hai bản mang nhãn trái ngược</td><td>bỏ bản lặp khỏi train</td></tr>
+        <tr><td>Câu train có trong val/test</td><td>0 câu</td><td>nếu có thì bỏ khỏi train</td></tr>
+        <tr><td>Câu trùng trong val, trong test</td><td>0 câu</td><td>không sửa val/test</td></tr>
+      </tbody>
+    </table>
+    <div class="card"><h3>Câu trùng duy nhất trong train</h3>
+      <p>"thầy dạy hay , tuy nhiên còn nhiều chỗ chưa thật sự giải đáp hoàn toàn cho sinh viên vì chưa đủ thời gian ." xuất hiện hai lần, một lần <code>positive</code> và một lần <code>negative</code> (cùng <code>lecturer</code>).</p>
+    </div>
+    <p class="key"><b>Nhận xét</b>Dữ liệu đã được tác giả làm sạch trước khi công bố. Câu trùng duy nhất là một câu vừa khen vừa chê, đúng loại câu khó gán một nhãn.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">03 | Kiểm tra chất lượng dữ liệu</p>
+  <h2>Độ dài câu, token đặc biệt và viết tắt</h2>
+  <div class="body">
+    <table>
+      <thead><tr><th>Kiểm tra</th><th>Kết quả</th><th>Cách xử lý</th></tr></thead>
+      <tbody>
+        <tr><td>Câu rất ngắn / rất dài</td><td>141 câu không quá 2 từ, 663 câu trên 30 từ</td><td>giữ lại, vì đều là câu trả lời thật</td></tr>
+        <tr><td>Tên ẩn danh <code>wzjwz&lt;số&gt;</code></td><td>211 câu, 233 mã khác nhau</td><td>thay bằng token chung <code>personname</code></td></tr>
+        <tr><td>Biểu tượng cảm xúc (<code>colonsmile</code>, ...)</td><td>85 câu</td><td>giữ lại vì mang cảm xúc</td></tr>
+        <tr><td>Viết tắt / teencode</td><td>25 token trong 21 câu</td><td>đổi sang dạng đầy đủ theo từ điển viết tắt</td></tr>
+      </tbody>
+    </table>
+    <div class="card"><h3>Từ điển viết tắt</h3>
+      <ul class="points sm">
+        <li>Tách toàn bộ dữ liệu thành từ, dùng LLM rà soát để tìm từ viết tắt và cách viết sai, rồi kiểm tra thủ công từng từ trong câu gốc.</li>
+        <li>Loại các từ dễ hiểu sai, ví dụ <code>k</code> (phần còn lại của <code>k6</code>, <code>320k</code> sau khi bỏ chữ số) và <code>bt</code> ("bài tập" hoặc "bình thường").</li>
+        <li>Thêm các viết tắt phổ biến như <code>gv</code>, <code>sv</code> để xử lý câu mới do người dùng nhập.</li>
+      </ul>
+    </div>
+    <p class="key"><b>Nhận xét</b>Dữ liệu gần như không có viết tắt, đúng như bài báo mô tả; từ điển chủ yếu cần cho câu mới.</p>
+  </div>
+</section>
+
+<!-- 04 -->
+<section class="slide section" data-sec="4"></section>
+
+<section class="slide">
+  <p class="kicker">04 | Khám phá dữ liệu</p>
+  <h2>Phân phối nhãn trên ba tập</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig01_label_distribution.png" alt="Phân phối nhãn cảm xúc và chủ đề trên ba tập"></div>
+    <ul class="points sm">
+      <li>Trong train, <code>neutral</code> chỉ chiếm 4.0% và <code>lecturer</code> chiếm 71.5%. Tỉ lệ giữa ba tập chênh nhau tối đa 2.1 điểm phần trăm.</li>
+    </ul>
+    <p class="key"><b>Nhận xét</b>Cả hai nhãn đều mất cân bằng. Accuracy sẽ che mất lỗi ở lớp nhỏ, nên mô hình được chọn theo macro-F1.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">04 | Khám phá dữ liệu</p>
+  <h2>Tỉ lệ cảm xúc theo chủ đề</h2>
+  <div class="body">
+    <div class="row">
+      <div class="fig w55"><img src="figures/fig02_topic_sentiment_heatmap.png" alt="Tỉ lệ cảm xúc theo chủ đề"></div>
+      <div class="col">
+        <table>
+          <thead><tr><th>Chủ đề</th><th class="n">Tỉ lệ tiêu cực</th><th class="n">Số câu</th></tr></thead>
+          <tbody>
+            <tr><td><code>facility</code></td><td class="n">95.4%</td><td class="n">474</td></tr>
+            <tr><td><code>program</code></td><td class="n">78.0%</td><td class="n">1 716</td></tr>
+            <tr><td><code>others</code></td><td class="n">40.2%</td><td class="n">226</td></tr>
+            <tr><td><code>lecturer</code></td><td class="n">35.6%</td><td class="n">2 909</td></tr>
+          </tbody>
+        </table>
+        <p class="key"><b>Nhận xét</b>Phản hồi về cơ sở vật chất ít nhưng gần như toàn là phàn nàn; <code>lecturer</code> có tỉ lệ tiêu cực thấp nhất nhưng chiếm 54.6% tổng số câu tiêu cực.</p>
+        <p class="note">Tỉ lệ từng ô khớp với bài báo gốc (chênh dưới 1 điểm phần trăm), trừ ô <code>lecturer</code> x <code>positive</code>, có vẻ là lỗi đánh máy của bài báo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">04 | Khám phá dữ liệu</p>
+  <h2>Độ dài câu theo lớp cảm xúc</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig03_sentence_length.png" alt="Phân phối độ dài câu theo lớp cảm xúc"></div>
+    <ul class="points sm">
+      <li>Trung vị độ dài: 12 từ với <code>negative</code>, 9 với <code>positive</code>, 6 với <code>neutral</code>. Câu tiêu cực dài hơn vì thường kèm lý do và đề xuất.</li>
+      <li>74.6% câu train không quá 15 từ, thấp hơn mức "hơn 83%" của bài báo, có thể vì bài báo đếm từ sau khi tách từ. Khoảng 43% câu <code>others</code> chỉ có 1-5 từ.</li>
+    </ul>
+    <p class="key"><b>Nhận xét</b>Các phân phối chồng lấn nhiều, nên độ dài không được dùng làm đặc trưng.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">04 | Khám phá dữ liệu</p>
+  <h2>Từ phổ biến theo lớp cảm xúc</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig04_top_ngrams.png" alt="Các n-gram phổ biến nhất theo lớp cảm xúc"></div>
+    <ul class="points sm">
+      <li>Câu tích cực chứa từ khen (<em>nhiệt tình</em>, <em>dễ</em>); câu tiêu cực chứa từ góp ý, phàn nàn (<em>nên</em>, <em>cần</em>, <em>hơn</em>); câu trung tính chứa cụm kiểu "không có ý kiến".</li>
+    </ul>
+    <p class="key"><b>Nhận xét</b>Từ vựng tách biệt rõ giữa các lớp, nên biểu diễn câu bằng tần suất từ (TF-IDF) là hướng hợp lý.</p>
+  </div>
+</section>
+
+<!-- 05 -->
+<section class="slide section" data-sec="5"></section>
+
+<section class="slide">
+  <p class="kicker">05 | Tiền xử lý dữ liệu</p>
+  <h2>Các bước tiền xử lý</h2>
+  <div class="body">
+    <ol class="steps">
+      <li><b>Bước 1</b><h3>Chuẩn hóa</h3>Unicode NFC; bỏ câu trùng khỏi train: 16 175 câu còn 16 174.</li>
+      <li><b>Bước 2</b><h3>Làm sạch</h3><code>clean_text()</code>: viết thường, tên ẩn danh thành <code>personname</code>, bỏ dấu câu và chữ số, đổi viết tắt.</li>
+      <li><b>Bước 3</b><h3>Tách từ</h3><code>pyvi</code> nối các âm tiết của một từ bằng <code>_</code>; 49 749 từ nhiều âm tiết.</li>
+      <li><b>Bước 4</b><h3>Mã hóa nhãn</h3><code>LabelEncoder</code> cho <code>sentiment</code> và <code>topic</code>.</li>
+      <li><b>Bước 5</b><h3>TF-IDF</h3>Unigram và bigram, bỏ n-gram chỉ gặp một lần, chuẩn hóa L2: 13 025 đặc trưng.</li>
+    </ol>
+    <table class="sm">
+      <thead><tr><th>Bước</th><th>Ví dụ</th><th>Dùng cho</th></tr></thead>
+      <tbody>
+        <tr><td>Câu gốc</td><td>nhiệt tình giảng dạy , gần gũi với sinh viên .</td><td></td></tr>
+        <tr><td>Sau <code>clean_text()</code></td><td>nhiệt tình giảng dạy gần gũi với sinh viên</td><td>embedding</td></tr>
+        <tr><td>Sau tách từ</td><td>nhiệt_tình giảng_dạy gần_gũi với sinh_viên</td><td>TF-IDF</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Các quy tắc theo từng dòng áp dụng như nhau cho mọi tập; từ vựng TF-IDF và bộ mã hóa nhãn chỉ được fit trên train. Val và test không bị bỏ dòng nào.</p>
+  </div>
+</section>
+
+<!-- 06 -->
+<section class="slide section" data-sec="6"></section>
+
+<section class="slide">
+  <p class="kicker">06 | Xây dựng mô hình</p>
+  <h2>So sánh ba bộ phân lớp trên TF-IDF</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig05_model_comparison.png" alt="Macro-F1 validation của ba bộ phân lớp trên TF-IDF"></div>
+    <ul class="points sm">
+      <li>Tham số mặc định; Logistic Regression và LinearSVC dùng <code>class_weight="balanced"</code>. Macro-F1 trên val.</li>
+      <li>Naive Bayes có accuracy 0.886 nhưng macro-F1 chỉ 0.605 với <code>sentiment</code>: tốt ở lớp lớn, kém ở lớp nhỏ như <code>neutral</code> và <code>others</code>.</li>
+    </ul>
+    <p class="key"><b>Nhận xét</b>LinearSVC tốt nhất ở cả hai nhãn (0.773 với <code>sentiment</code>, 0.748 với <code>topic</code>), Logistic Regression kém khoảng 2 điểm.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">06 | Xây dựng mô hình</p>
+  <h2>TF-IDF và embedding tiếng Việt với LinearSVC</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w55">
+        <table>
+          <thead><tr><th>Macro-F1 trên val</th><th class="n">TF-IDF</th><th class="n">Embedding</th></tr></thead>
+          <tbody>
+            <tr><td><code>sentiment</code></td><td class="n">0.7729</td><td class="n"><strong>0.8244</strong></td></tr>
+            <tr><td><code>topic</code></td><td class="n">0.7484</td><td class="n"><strong>0.7496</strong></td></tr>
+          </tbody>
+        </table>
+        <p class="key"><b>Nhận xét</b>Với <code>sentiment</code>, embedding tốt hơn rõ rệt (+5.2 điểm); với <code>topic</code>, hai cách gần như bằng nhau. Theo cách chọn mô hình, embedding + LinearSVC là mô hình cuối cùng cho cả hai nhãn.</p>
+      </div>
+      <div class="col">
+        <ul class="points">
+          <li>Giữ LinearSVC, chỉ thay cách biểu diễn câu.</li>
+          <li>Embedding: <code>AITeamVN/Vietnamese_Embedding</code>, vector 1 024 chiều, giấy phép Apache 2.0.</li>
+          <li>Có thể vì cảm xúc phụ thuộc vào nghĩa của cả câu, còn chủ đề thường lộ ra qua vài từ khóa mà TF-IDF đã bắt được.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 -->
+<section class="slide section" data-sec="7"></section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Kết quả trên tập test</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w60">
+        <table class="sm">
+          <thead><tr><th>Nhãn</th><th>Mô hình</th><th class="n">Accuracy</th><th class="n">Macro-F1</th></tr></thead>
+          <tbody>
+            <tr><td><code>sentiment</code></td><td>Naive Bayes, TF-IDF</td><td class="n">0.8699</td><td class="n">0.5955</td></tr>
+            <tr><td></td><td>Logistic Regression, TF-IDF</td><td class="n">0.8692</td><td class="n">0.7201</td></tr>
+            <tr><td></td><td>LinearSVC, TF-IDF</td><td class="n">0.8961</td><td class="n">0.7388</td></tr>
+            <tr class="best"><td></td><td>LinearSVC, embedding</td><td class="n">0.9169</td><td class="n">0.8011</td></tr>
+            <tr><td><code>topic</code></td><td>Naive Bayes, TF-IDF</td><td class="n">0.8184</td><td class="n">0.5440</td></tr>
+            <tr><td></td><td>Logistic Regression, TF-IDF</td><td class="n">0.8143</td><td class="n">0.7283</td></tr>
+            <tr><td></td><td>LinearSVC, TF-IDF</td><td class="n">0.8547</td><td class="n">0.7516</td></tr>
+            <tr class="best"><td></td><td>LinearSVC, embedding</td><td class="n">0.8500</td><td class="n">0.7522</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col">
+        <div class="card hot"><h3>sentiment, macro-F1</h3><p class="stat">0.8011</p><p>+6.2 điểm so với TF-IDF</p></div>
+        <div class="card"><h3>topic, macro-F1</h3><p class="stat">0.7522</p><p>gần như bằng TF-IDF (0.7516)</p></div>
+        <p class="note">Tập test 3 166 câu, dùng một lần. Thứ tự các mô hình giống trên val. Weighted-F1 0.917 và 0.857, cao hơn mô hình Logistic Regression của bài báo gốc (khoảng 0.88 và 0.84).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Ma trận nhầm lẫn</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig06_confusion_matrices.png" alt="Ma trận nhầm lẫn của mô hình cuối cùng"></div>
+    <ul class="points sm">
+      <li>Mô hình cuối cùng, chuẩn hóa theo hàng: mỗi hàng là một lớp thực tế.</li>
+      <li>Recall 95.0% với <code>negative</code>, 92.8% với <code>positive</code>, 53.3% với <code>neutral</code>; với chủ đề, <code>others</code> chỉ đạt 56.0%.</li>
+    </ul>
+    <p class="key"><b>Nhận xét</b>Lỗi tập trung ở hai lớp nhỏ, <code>neutral</code> và <code>others</code>.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>So sánh F1 từng lớp với bài báo gốc</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col w55">
+        <table>
+          <thead><tr><th>Nhãn</th><th>Lớp</th><th class="n">Nhóm</th><th class="n">Bài báo</th><th class="n">Chênh</th></tr></thead>
+          <tbody>
+            <tr><td><code>sentiment</code></td><td>negative</td><td class="n">0.9409</td><td class="n">0.9052</td><td class="n">+0.036</td></tr>
+            <tr><td></td><td>neutral</td><td class="n">0.5251</td><td class="n">0.3399</td><td class="n"><strong>+0.185</strong></td></tr>
+            <tr><td></td><td>positive</td><td class="n">0.9374</td><td class="n">0.9132</td><td class="n">+0.024</td></tr>
+            <tr><td><code>topic</code></td><td>facility</td><td class="n">0.9060</td><td class="n">0.8873</td><td class="n">+0.019</td></tr>
+            <tr><td></td><td>lecturer</td><td class="n">0.9149</td><td class="n">0.9112</td><td class="n">+0.004</td></tr>
+            <tr><td></td><td>others</td><td class="n">0.4635</td><td class="n">0.3810</td><td class="n"><strong>+0.083</strong></td></tr>
+            <tr><td></td><td>program</td><td class="n">0.7245</td><td class="n">0.6719</td><td class="n">+0.053</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col">
+        <ul class="points">
+          <li>So với mô hình Logistic Regression của bài báo trên cùng tập test.</li>
+          <li>F1 cao hơn ở cả 7 lớp, tăng nhiều nhất ở các lớp nhỏ và khó: <code>neutral</code>, <code>others</code>, <code>program</code>.</li>
+        </ul>
+        <p class="key"><b>Nhận xét</b><code>neutral</code> (0.53) và <code>others</code> (0.46) vẫn là hai lớp yếu nhất.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>TF-IDF và embedding trên tập test</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig07_tfidf_vs_embedding.png" alt="LinearSVC trên TF-IDF và trên embedding, tập test"></div>
+    <p class="key"><b>Nhận xét</b>Cùng LinearSVC, embedding tăng macro-F1 test từ 0.7388 lên 0.8011 với <code>sentiment</code> (+6.2 điểm), còn với <code>topic</code> gần như không đổi (0.7516 và 0.7522), giống kết quả trên val.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Các n-gram mạnh nhất của mô hình</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig08_top_ngrams.png" alt="N-gram mạnh nhất theo lớp cảm xúc của LinearSVC trên TF-IDF"></div>
+    <ul class="points sm">
+      <li>Embedding không đọc được theo từ, nên phân tích LinearSVC trên TF-IDF: <code>positive</code> dựa vào <em>nhiệt_tình</em>, <em>tốt</em>; <code>negative</code> dựa vào <em>chưa</em>, <em>cần</em>, <em>nên</em>.</li>
+      <li>Xóa 60 n-gram mạnh nhất khỏi vector test: macro-F1 giảm từ 0.7388 xuống 0.6544; xóa 60 n-gram ngẫu nhiên: 0.7373.</li>
+    </ul>
+    <p class="key"><b>Nhận xét</b>Các n-gram mạnh nhất thật sự quyết định dự đoán. <em>cần</em>, <em>nên</em> mạnh vì lời đề nghị được gán <code>negative</code>.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Tỉ lệ đoán sai theo nhóm câu</h2>
+  <div class="body">
+    <div class="fig"><img src="figures/fig09_error_analysis.png" alt="Tỉ lệ đoán sai theo độ dài, loại từ và chủ đề"></div>
+    <ul class="points sm">
+      <li>Mô hình cảm xúc sai 263 trên 3 166 câu test (8.3%); 61.2% số lỗi dính đến <code>neutral</code> dù lớp này chỉ có 167 câu.</li>
+      <li>Câu có từ đối lập (<em>nhưng</em>, <em>tuy</em>) sai 18.4%, gấp 2.4 lần câu không có (7.8%); câu 1-5 từ sai 10.6%; chủ đề <code>others</code> sai 30.2%.</li>
+    </ul>
+    <p class="key"><b>Nhận xét</b>Nguồn lỗi chính là câu vừa khen vừa chê: giới hạn của việc gán một nhãn cho cả câu, không chỉ của mô hình.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <p class="kicker">07 | Đánh giá và phân tích lỗi</p>
+  <h2>Dự đoán phản hồi mới</h2>
+  <div class="body">
+    <table>
+      <thead><tr><th>Câu nhập vào</th><th>sentiment</th><th>topic</th></tr></thead>
+      <tbody>
+        <tr><td>"gv dạy ko hiểu gì cả, nói quá nhanh"</td><td><code>negative</code></td><td><code>lecturer</code></td></tr>
+        <tr><td>"wifi trong phòng máy rất yếu, máy chiếu hay bị hỏng"</td><td><code>negative</code></td><td><code>facility</code></td></tr>
+        <tr><td>"môn học rất bổ ích và thực tế"</td><td><code>positive</code></td><td><code>program</code></td></tr>
+        <tr><td>"nên cho thêm bài tập thực hành cuối mỗi chương"</td><td><code>negative</code></td><td><code>program</code></td></tr>
+        <tr><td>"thầy dạy dễ hiểu nhưng phòng học nóng quá"</td><td><code>negative</code></td><td><code>lecturer</code></td></tr>
+        <tr><td>&nbsp;&nbsp;tách tại "nhưng": "thầy dạy dễ hiểu"</td><td><code>positive</code></td><td><code>lecturer</code></td></tr>
+        <tr><td>&nbsp;&nbsp;tách tại "nhưng": "phòng học nóng quá"</td><td><code>negative</code></td><td><code>facility</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points sm">
+      <li><code>predict()</code> chạy toàn bộ quy trình trên văn bản thô: cùng hàm <code>clean_text()</code> (viết tắt <em>gv</em>, <em>ko</em> được đổi), mã hóa bằng embedding, rồi hai mô hình cuối cùng.</li>
+      <li>Câu trộn lẫn chỉ nhận một cặp nhãn; tách theo mệnh đề cho kết quả đúng với từng ý.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 08 -->
+<section class="slide section" data-sec="8"></section>
+
+<section class="slide">
+  <p class="kicker">08 | Kết luận</p>
+  <h2>Kết luận, hạn chế và hướng mở rộng</h2>
+  <div class="body">
+    <div class="row">
+      <div class="col">
+        <div class="card"><h3>Kết quả</h3>
+          <ul class="points sm">
+            <li>Embedding tiếng Việt + LinearSVC: macro-F1 0.8011 với cảm xúc và 0.7522 với chủ đề trên test.</li>
+            <li>Cao hơn baseline Naive Bayes (0.5955 và 0.5440) và cao hơn bài báo gốc ở mọi lớp.</li>
+            <li>Embedding giúp rõ với cảm xúc (+6.2 điểm), gần như không đổi với chủ đề.</li>
+          </ul>
+        </div>
+        <div class="card"><h3>Hướng mở rộng</h3>
+          <ul class="points sm">
+            <li>Fine-tune mô hình embedding hoặc PhoBERT trên dữ liệu này.</li>
+            <li>Gán nhãn theo mệnh đề; thêm nhãn riêng cho lời góp ý.</li>
+            <li>Kiểm tra trên phản hồi của khoa hoặc trường khác.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card"><h3>Hạn chế</h3>
+          <ul class="points sm">
+            <li>Mỗi câu một nhãn, nên câu vừa khen vừa chê là nguồn lỗi chính.</li>
+            <li><code>neutral</code> và <code>others</code> vẫn yếu (F1 khoảng 0.53 và 0.46).</li>
+            <li>Lời đề nghị được tính là <code>negative</code>, nên lớp này lẫn cả phàn nàn và góp ý.</li>
+            <li>Bộ phân lớp dùng tham số mặc định; embedding chỉ dùng làm hàm trích đặc trưng.</li>
+            <li>Dữ liệu từ một trường và đã chuẩn hóa; phản hồi kiểu mạng xã hội có thể cho kết quả thấp hơn.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+<script src="../../assets/js/slides.js"></script>
+</body>
+</html>

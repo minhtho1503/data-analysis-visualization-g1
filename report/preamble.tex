@@ -1,0 +1,65 @@
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+\setmainfont{texgyretermes}[
+    Extension      = .otf,
+    UprightFont    = *-regular,
+    BoldFont       = *-bold,
+    ItalicFont     = *-italic,
+    BoldItalicFont = *-bolditalic
+]
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+\setlength{\emergencystretch}{3em}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{float}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{hyperref}
+\hypersetup{plainpages=false, colorlinks=true, linkcolor=black, urlcolor=blue!60!black, citecolor=black}
+
+\newcommand{\schoolname}{Trường Đại học Bách Khoa -- ĐHQG-HCM}
+\newcommand{\facultyname}{Khoa Khoa học và Kỹ thuật Máy tính}
+\newcommand{\coursename}{Nền tảng lập trình cho phân tích và trực quan dữ liệu}
+\newcommand{\coursecode}{CO5177}
+\newcommand{\semestername}{Học kỳ 261, năm học 2026--2027}
+\newcommand{\lecturername}{TS. Lê Thành Sách}
+\newcommand{\groupname}{G1}
+\newcommand{\landingurl}{https://minhtho1503.github.io/data-analysis-visualization-g1/}
+\newcommand{\repourl}{https://github.com/minhtho1503/data-analysis-visualization-g1}
+\newcommand{\reportdate}{TP. Hồ Chí Minh, tháng 11 năm 2026}
+\newcommand{\studentrows}{%
+  HVTH: & Phan Thị Minh Thơ -- 2470112 \\
+        & Nguyễn Thị Thu An -- 2470315 \\
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\leftmark}
+\rhead{\thepage}
+\fancypagestyle{plain}{\fancyhf{}\rhead{\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+\titleformat{\chapter}[display]{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+\newcommand{\reporttype}{BÁO CÁO BÀI TẬP LỚN}
+\newcommand{\reportsubtitle}{}
+
+\newcommand{\figdir}{}
+\newcommand{\reportfig}[3]{%
+  \begin{figure}[H]\centering
+    \IfFileExists{\figdir#1}%
+      {\includegraphics[width=\linewidth]{\figdir#1}}%
+      {\fbox{\parbox[c][5cm][c]{0.9\linewidth}{\centering\ttfamily chưa có hình: \detokenize{#1}}}}%
+    \caption{#2}\label{#3}
+  \end{figure}}

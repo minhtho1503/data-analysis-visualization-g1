@@ -1,0 +1,23 @@
+% !TEX program = xelatex
+\documentclass[12pt,a4paper,oneside]{report}
+\newcommand{\sharedroot}{./}
+\input{preamble}
+\renewcommand{\reporttype}{BÁO CÁO TỔNG HỢP}
+\renewcommand{\reportsubtitle}{Phân tích ba loại dữ liệu}
+
+\newcommand{\projectchapter}[1]{%
+  \renewcommand{\figdir}{../projects/#1/figures/}%
+  \input{../projects/#1/report/chapter}}
+
+\begin{document}
+\input{cover}
+\pagenumbering{roman}
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage
+\pagenumbering{arabic}
+\projectchapter{tabular}
+\projectchapter{text}
+\projectchapter{image}
+\end{document}

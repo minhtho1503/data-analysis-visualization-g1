@@ -1,0 +1,292 @@
+\chapter[Phân loại phản hồi của sinh viên]{Phân loại phản hồi của sinh viên theo cảm xúc và chủ đề}
+
+\section{Bài toán và hướng tiếp cận}
+
+Mỗi học kỳ, Trường Đại học Công nghệ Thông tin (ĐHQG-HCM) thu thập ý kiến phản hồi tự do của sinh viên về giảng viên,
+chương trình đào tạo và cơ sở vật chất. Với hơn 16 000 câu phản hồi, việc đọc và phân loại thủ công tốn nhiều thời
+gian. Bài tập này xây dựng mô hình tự động gán cho mỗi câu phản hồi hai nhãn:
+
+\begin{itemize}
+  \item \textbf{Cảm xúc} (\texttt{sentiment}, nhiệm vụ chính): \texttt{negative}, \texttt{neutral}, \texttt{positive}.
+  \item \textbf{Chủ đề} (\texttt{topic}, nhiệm vụ phụ): \texttt{lecturer} (giảng viên), \texttt{program} (chương trình
+        đào tạo), \texttt{facility} (cơ sở vật chất), \texttt{others} (chủ đề khác).
+\end{itemize}
+
+Đây là bài toán phân tích cảm xúc, một dạng phân loại văn bản có giám sát. Vì mô hình phân loại chỉ làm việc với số,
+mỗi câu được biểu diễn thành một vector. Quy trình gồm các bước: kiểm tra chất lượng và phân tích khám phá dữ liệu; tiền
+xử lý văn bản (làm sạch, đổi viết tắt, tách từ tiếng Việt); so sánh ba bộ phân lớp của scikit-learn trên đặc trưng
+TF-IDF; thay TF-IDF bằng embedding câu tiếng Việt cho bộ phân lớp tốt nhất; đánh giá một lần trên tập test và phân tích
+lỗi. Notebook chạy được trên Google Colab với \textit{Runtime > Run all}.
+
+\section{Bộ dữ liệu}
+
+\begin{itemize}
+  \item \textbf{Nguồn:} bộ dữ liệu UIT-VSFC (Vietnamese Students' Feedback Corpus) \cite{text-vsfc}, tải từ trang Hugging Face
+        của nhóm tác giả (\texttt{uitnlp/vietnamese\_students\_feedback}), không cần đăng nhập.
+  \item \textbf{Giấy phép:} dùng cho mục đích nghiên cứu theo thỏa thuận của nhóm tác giả. Nhóm trích dẫn nguồn và không
+        đưa dữ liệu lên repo.
+  \item \textbf{Nội dung:} câu phản hồi trong khảo sát cuối học kỳ, từ năm học 2014-2015 đến 2016-2017, được gán nhãn thủ
+        công. Văn bản đã được viết thường, tách dấu câu, ẩn danh tên giảng viên (\texttt{wzjwz<số>}) và chuẩn hóa viết tắt
+        trước khi công bố.
+  \item \textbf{Quy tắc gán nhãn:} \texttt{negative} gồm cả lời phàn nàn lẫn đề nghị cải thiện; \texttt{neutral} là câu
+        không nêu ý kiến hoặc chưa trọn ý, kể cả lời cảm ơn; câu vừa khen vừa chê được gán theo ý mạnh hơn.
+  \item \textbf{Độ tin cậy của nhãn:} mức đồng thuận giữa người gán nhãn là 91.2\% với cảm xúc nhưng chỉ 71.07\% với chủ
+        đề, nên nhãn chủ đề kém chắc chắn hơn.
+\end{itemize}
+
+Nhóm giữ nguyên cách chia train / dev / test của tác giả và dùng làm train / val / test, để kết quả so sánh được
+với bài báo gốc (Bảng~\ref{tab:text-split}). Bộ dữ liệu đáp ứng yêu cầu của đề với dữ liệu văn bản: 16 175 câu, nhiều
+hơn mức tối thiểu 2 000, và 99.9\% số câu có chữ tiếng Việt có dấu.
+
+\begin{table}[H]\centering
+\caption{Kích thước ba tập và tỉ lệ lớp \texttt{neutral}.}\label{tab:text-split}
+\begin{tabular}{lrrr}
+\toprule
+Tập & Số câu & Tỉ lệ & Tỉ lệ \texttt{neutral} \\
+\midrule
+train & 11 426 & 70.6\% & 4.0\% \\
+val & 1 583 & 9.8\% & 4.6\% \\
+test & 3 166 & 19.6\% & 5.3\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Kiểm tra chất lượng dữ liệu}
+
+Mục này chỉ chẩn đoán vấn đề; cách xử lý được áp dụng ở bước tiền xử lý. Bảng~\ref{tab:text-quality} tổng hợp kết quả.
+
+\begin{table}[H]\centering
+\caption{Các vấn đề chất lượng dữ liệu và cách xử lý.}\label{tab:text-quality}
+\begin{tabular}{>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{5.4cm}}
+\toprule
+Vấn đề & Kết quả kiểm tra & Cách xử lý \\
+\midrule
+Giá trị thiếu, câu rỗng & 0 câu & nếu có thì bỏ khỏi train/val/test \\
+Unicode không ở dạng NFC & 0 câu & vẫn chuẩn hóa NFC cho câu mới \\
+Câu trùng trong train & 1 câu, hai bản mang nhãn trái ngược & bỏ bản lặp khỏi train \\
+Câu train có trong val/test & 0 câu & nếu có thì bỏ khỏi train \\
+Câu rất ngắn / rất dài & 141 câu không quá 2 từ, 663 câu trên 30 từ & giữ lại, vì đều là câu trả lời thật \\
+Tên ẩn danh \texttt{wzjwz<số>} & 211 câu, 233 mã khác nhau & thay bằng một token chung \texttt{personname} \\
+Biểu tượng cảm xúc (\texttt{colonsmile}, ...) & 85 câu & giữ lại vì mang cảm xúc \\
+Viết tắt / teencode & 25 token trong 21 câu & đổi sang dạng đầy đủ theo từ điển viết tắt \\
+Nhãn mất cân bằng & \texttt{neutral} chỉ 4.0\% tập train & chọn mô hình theo macro-F1, dùng \texttt{class\_weight="balanced"} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Từ điển viết tắt (gồm các cặp từ viết tắt và dạng đầy đủ) được xây dựng bằng cách tách
+toàn bộ dữ liệu thành từ, dùng LLM rà soát để tìm từ viết tắt và cách viết sai, rồi kiểm tra thủ công từng từ trong câu
+gốc. Các từ dễ hiểu sai bị loại, ví dụ \texttt{k} (phần còn lại của \texttt{k6}, \texttt{320k} sau khi bỏ chữ số) và
+\texttt{bt} (có thể là ``bài tập'' hoặc ``bình thường''). Từ điển cũng có thêm các cách viết tắt phổ biến như
+\texttt{gv}, \texttt{sv} để xử lý câu mới do người dùng nhập. Kết quả cho thấy dữ liệu gần như không có viết tắt, đúng
+như bài báo mô tả.
+
+\section{Phân tích khám phá dữ liệu}
+
+Phân tích khám phá chỉ dùng tập train, trừ Hình~\ref{fig:text-labels} so sánh ba tập.
+
+\reportfig{fig01_label_distribution.png}{Cả hai nhãn đều mất cân bằng: trong train, \texttt{neutral} chỉ chiếm 4.0\%
+và chủ đề \texttt{lecturer} chiếm 71.5\%. Tỉ lệ giữa ba tập chênh nhau tối đa 2.1 điểm phần trăm.}{fig:text-labels}
+
+Vì lớp \texttt{neutral} rất nhỏ, accuracy sẽ che mất việc mô hình nhận sai lớp này. Do đó mô hình được chọn theo
+macro-F1, thước đo lấy trung bình F1 của các lớp với trọng số như nhau.
+
+\reportfig{fig02_topic_sentiment_heatmap.png}{Tỉ lệ và số câu tiêu cực theo chủ đề: \texttt{facility} 95.4\% (474 câu),
+\texttt{program} 78.0\% (1 716 câu), \texttt{others} 40.2\% (226 câu), \texttt{lecturer} 35.6\% (2 909 câu).
+Phản hồi về cơ sở vật chất ít nhưng gần như toàn là phàn nàn, còn giảng viên chiếm 54.6\% tổng số câu tiêu
+cực.}{fig:text-topic}
+
+Tỉ lệ từng cặp chủ đề và cảm xúc trên tập train khớp với bảng thống kê của bài báo gốc (chênh dưới 1 điểm phần trăm ở mọi
+ô), trừ ô \texttt{lecturer} x \texttt{positive} (44.38\% so với 33.57\%). Ô này có vẻ là lỗi đánh máy của bài báo: hàng
+\texttt{lecturer} của bài báo chỉ cộng lại được 60.76\% thay vì 71.76\%.
+
+\reportfig{fig03_sentence_length.png}{Trung vị độ dài là 12 từ với câu \texttt{negative}, 9 với \texttt{positive} và 6
+với \texttt{neutral}. Câu tiêu cực dài hơn vì thường kèm lý do và đề xuất, nhưng các phân phối chồng lấn nhiều nên độ
+dài không được dùng làm đặc trưng.}{fig:text-length}
+
+Chia theo khoảng 5 từ như bài báo, 74.6\% số câu train không quá 15 từ, thấp hơn mức ``hơn 83\%'' của bài báo, có thể vì
+bài báo đếm từ sau khi tách từ còn nhóm đếm âm tiết. Khoảng 43\% câu \texttt{others} chỉ có 1-5 từ.
+
+\reportfig{fig04_top_ngrams.png}{Câu tích cực chủ yếu chứa từ khen (\textit{nhiệt tình}, \textit{dễ}), câu tiêu cực chứa
+từ góp ý, phàn nàn (\textit{nên}, \textit{cần}, \textit{hơn}), câu trung tính chứa cụm kiểu ``không có ý kiến''. Từ vựng
+tách biệt rõ giữa các lớp, nên biểu diễn câu bằng tần suất từ là hướng hợp lý.}{fig:text-ngrams}
+
+\section{Tiền xử lý dữ liệu}
+
+Các bước được áp dụng theo thứ tự sau. Các quy tắc theo từng dòng được áp dụng như nhau cho mọi tập, còn mọi thống kê
+học từ dữ liệu (từ vựng TF-IDF, bộ mã hóa nhãn) chỉ được fit trên train; validation và test không bị bỏ dòng nào.
+
+\begin{enumerate}
+  \item Chuẩn hóa Unicode NFC và bỏ câu trùng khỏi train: 16 175 câu còn 16 174.
+  \item Hàm \texttt{clean\_text()}: viết thường, thay tên ẩn danh bằng \texttt{personname}, bỏ dấu câu và chữ số, đổi
+        viết tắt theo từ điển viết tắt, gộp khoảng trắng.
+  \item Tách từ tiếng Việt bằng \texttt{pyvi}: nối các âm tiết của một từ bằng dấu \texttt{\_} (ví dụ \textit{giảng
+        viên} thành \texttt{giảng\_viên}); tìm được 49 749 từ nhiều âm tiết. Văn bản đã tách từ dùng cho TF-IDF, văn bản
+        chưa tách từ dùng cho mô hình embedding.
+  \item Mã hóa nhãn bằng \texttt{LabelEncoder}.
+  \item Biểu diễn TF-IDF: unigram và bigram, bỏ n-gram chỉ gặp một lần, chuẩn hóa L2 để câu dài và câu ngắn có cùng thang
+        đo. Từ vựng có 13 025 đặc trưng.
+\end{enumerate}
+
+\section{Xây dựng mô hình}
+
+Mô hình được huấn luyện trên train và chọn theo macro-F1 trên validation; tập test chỉ dùng một lần. Ba bộ phân lớp của
+scikit-learn được so sánh với tham số mặc định: Naive Bayes (\texttt{MultinomialNB}), Logistic Regression và LinearSVC.
+Bài báo gốc cũng dùng Logistic Regression làm baseline. Vì lớp
+\texttt{neutral} rất nhỏ, Logistic Regression và LinearSVC luôn dùng \texttt{class\_weight="balanced"} để lỗi ở lớp
+nhỏ bị phạt nặng hơn.
+
+\subsection{So sánh các bộ phân lớp trên TF-IDF}
+
+\reportfig{fig05_model_comparison.png}{Macro-F1 validation của ba bộ phân lớp trên cùng đặc trưng TF-IDF. LinearSVC tốt
+nhất ở cả hai nhãn (0.773 với \texttt{sentiment}, 0.748 với \texttt{topic}).}{fig:text-models}
+
+LinearSVC đạt macro-F1 validation cao nhất ở cả hai nhãn, Logistic Regression kém khoảng 2 điểm, còn Naive Bayes thấp
+hơn hẳn (0.605 và 0.480) dù accuracy vẫn cao (0.886 với \texttt{sentiment}): mô hình này làm tốt ở lớp lớn nhưng kém ở các
+lớp nhỏ như \texttt{neutral} và \texttt{others}. Đây là ví dụ cho thấy vì sao phải chọn mô hình theo macro-F1.
+
+\subsection{Embedding tiếng Việt có giúp bộ phân lớp tốt nhất không?}
+
+Giữ LinearSVC, nhóm thay TF-IDF bằng embedding câu của \url{AITeamVN/Vietnamese_Embedding} \cite{text-emb}, mô hình embedding câu
+tiếng Việt được fine-tune từ BGE-M3 (vector 1024 chiều, giấy phép Apache 2.0). Mô hình được dùng như một hàm trích đặc
+trưng có sẵn, không fine-tune thêm.
+
+\begin{table}[H]\centering
+\caption{LinearSVC trên TF-IDF và trên embedding tiếng Việt (macro-F1 validation).}\label{tab:text-emb-val}
+\begin{tabular}{lrr}
+\toprule
+Nhãn & TF-IDF & Embedding \\
+\midrule
+\texttt{sentiment} & 0.7729 & \textbf{0.8244} \\
+\texttt{topic} & 0.7484 & \textbf{0.7496} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Với \texttt{sentiment}, embedding tốt hơn rõ rệt (+5.2 điểm); với \texttt{topic}, hai cách gần như bằng nhau. Có thể vì
+cảm xúc phụ thuộc vào nghĩa của cả câu, còn chủ đề thường lộ ra qua vài từ khóa mà TF-IDF đã bắt được. Theo cách chọn
+mô hình, \textbf{embedding tiếng Việt + LinearSVC} là mô hình cuối cùng cho cả hai nhãn.
+
+\section{Đánh giá trên tập test}
+
+\begin{table}[H]\centering
+\caption{Kết quả trên tập test. Hàng in đậm là mô hình cuối cùng, chọn theo macro-F1 validation.}\label{tab:text-test}
+\begin{tabular}{llrrr}
+\toprule
+Nhãn & Mô hình & Accuracy & Macro-F1 & Weighted-F1 \\
+\midrule
+\texttt{sentiment} & Naive Bayes, TF-IDF & 0.8699 & 0.5955 & 0.8466 \\
+ & Logistic Regression, TF-IDF & 0.8692 & 0.7201 & 0.8748 \\
+ & LinearSVC, TF-IDF & 0.8961 & 0.7388 & 0.8917 \\
+ & \textbf{LinearSVC, embedding} & \textbf{0.9169} & \textbf{0.8011} & \textbf{0.9172} \\
+\midrule
+\texttt{topic} & Naive Bayes, TF-IDF & 0.8184 & 0.5440 & 0.7809 \\
+ & Logistic Regression, TF-IDF & 0.8143 & 0.7283 & 0.8282 \\
+ & LinearSVC, TF-IDF & 0.8547 & 0.7516 & 0.8562 \\
+ & \textbf{LinearSVC, embedding} & \textbf{0.8500} & \textbf{0.7522} & \textbf{0.8574} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Thứ tự các mô hình trên test giống trên validation ở cả hai nhãn. Weighted-F1 của mô hình cuối cùng (0.917 và 0.857) cao
+hơn mô hình Logistic Regression của bài báo gốc (khoảng 0.88 và 0.84). Với \texttt{topic}, embedding và TF-IDF gần như bằng
+nhau.
+
+\reportfig{fig06_confusion_matrices.png}{Ma trận nhầm lẫn của mô hình cuối cùng (chuẩn hóa theo hàng). Recall đạt 95.0\%
+với \texttt{negative} và 92.8\% với \texttt{positive} nhưng chỉ 53.3\% với \texttt{neutral}; với chủ đề, \texttt{others}
+chỉ đạt 56.0\%.}{fig:text-cm}
+
+\begin{table}[H]\centering
+\caption{F1 từng lớp so với mô hình Logistic Regression của bài báo gốc trên cùng tập test.}\label{tab:text-perclass}
+\begin{tabular}{llrrr}
+\toprule
+Nhãn & Lớp & Nhóm & Bài báo & Chênh lệch \\
+\midrule
+\texttt{sentiment} & \texttt{negative} & 0.9409 & 0.9052 & +0.036 \\
+ & \texttt{neutral} & 0.5251 & 0.3399 & +0.185 \\
+ & \texttt{positive} & 0.9374 & 0.9132 & +0.024 \\
+\midrule
+\texttt{topic} & \texttt{facility} & 0.9060 & 0.8873 & +0.019 \\
+ & \texttt{lecturer} & 0.9149 & 0.9112 & +0.004 \\
+ & \texttt{others} & 0.4635 & 0.3810 & +0.083 \\
+ & \texttt{program} & 0.7245 & 0.6719 & +0.053 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Mô hình cuối cùng có F1 cao hơn bài báo ở cả 7 lớp, tăng nhiều nhất ở các lớp nhỏ và khó (\texttt{neutral},
+\texttt{others}, \texttt{program}). Tuy vậy \texttt{neutral} (0.53) và \texttt{others} (0.46) vẫn là hai lớp yếu nhất.
+
+\subsection{TF-IDF hay embedding tiếng Việt?}
+
+\reportfig{fig07_tfidf_vs_embedding.png}{Cùng bộ phân lớp LinearSVC, embedding tiếng Việt tăng macro-F1 test từ 0.7388
+lên 0.8011 với \texttt{sentiment} (+6.2 điểm), còn với \texttt{topic} gần như không đổi (0.7516 và
+0.7522).}{fig:text-emb}
+
+\subsection{Mô hình dựa vào những từ nào?}
+
+Mô hình cuối cùng dùng embedding 1024 chiều, các chiều này không ứng với từ nào nên không đọc được mô hình dựa vào từ gì.
+Vì vậy nhóm phân tích mô hình TF-IDF tốt nhất (LinearSVC trên TF-IDF), mô hình có một trọng số cho mỗi cặp (lớp,
+n-gram). Để kiểm chứng các n-gram mạnh nhất có thật sự quyết định dự đoán, nhóm xóa chúng khỏi vector test và so với
+việc xóa cùng số lượng n-gram ngẫu nhiên.
+
+\reportfig{fig08_top_ngrams.png}{N-gram mạnh nhất theo lớp cảm xúc của LinearSVC trên TF-IDF. \texttt{positive} dựa vào
+\textit{nhiệt\_tình}, \textit{tốt}; \texttt{negative} dựa vào \textit{chưa}, \textit{cần}, \textit{nên}. Xóa 60 n-gram
+mạnh nhất làm macro-F1 giảm từ 0.7388 xuống 0.6544, trong khi xóa 60 n-gram ngẫu nhiên chỉ còn 0.7373.}{fig:text-words}
+
+Các động từ góp ý \textit{cần}, \textit{nên} là tín hiệu \texttt{negative} mạnh vì theo quy tắc gán nhãn, đề nghị cải
+thiện được tính là tiêu cực. Các n-gram mạnh nhất của \texttt{neutral} (\textit{rất ít}, \textit{nhưng hơi}) mang sắc
+thái chê nhẹ hoặc lưng chừng, cho thấy lớp này không có từ vựng riêng rõ ràng. Với chủ đề cơ sở vật chất, các từ đẩy
+câu về tiêu cực mạnh nhất là \textit{máy\_chiếu}, \textit{phòng}, \textit{trang thiết\_bị}, \textit{wifi}.
+
+\subsection{Mô hình sai ở đâu?}
+
+Mô hình cảm xúc cuối cùng đoán sai 263 trên 3 166 câu test (8.3\%). Kiểu sai nhiều nhất là câu \texttt{positive} bị
+đoán thành \texttt{negative} (25.5\% số lỗi), và 61.2\% số lỗi có dính đến lớp \texttt{neutral} dù lớp này chỉ có 167
+câu.
+
+\reportfig{fig09_error_analysis.png}{Tỉ lệ đoán sai theo độ dài câu, theo loại từ trong câu và theo chủ đề. Câu có từ đối
+lập (\textit{nhưng}, \textit{tuy}, ...) sai 18.4\%, gấp 2.4 lần câu không có (7.8\%); câu 1-5 từ sai nhiều nhất (10.6\%);
+câu thuộc chủ đề \texttt{others} sai 30.2\%.}{fig:text-errors}
+
+Từ phủ định gần như không ảnh hưởng đến tỉ lệ sai (7.9\% so với 8.4\%), còn câu có từ góp ý lại ít sai hơn (6.1\% so với
+8.8\%) vì dữ liệu luôn gán lời góp ý là \texttt{negative}. Nguồn lỗi chính là câu vừa khen vừa chê, một giới hạn của việc
+gán một nhãn cho cả câu chứ không chỉ của mô hình.
+
+\section{Dự đoán phản hồi mới}
+
+Hàm \texttt{predict()} chạy toàn bộ quy trình trên văn bản thô: làm sạch bằng cùng hàm \texttt{clean\_text()}, mã hóa câu
+bằng mô hình embedding, rồi dự đoán bằng hai mô hình cuối cùng. Câu có viết tắt như \textit{``gv dạy ko hiểu gì cả, nói
+quá nhanh''} được xếp \texttt{negative}, \texttt{lecturer}; câu đề nghị \textit{``nên cho thêm bài tập thực hành cuối mỗi
+chương''} được xếp \texttt{negative}, \texttt{program}, đúng quy tắc gán nhãn. Câu \textit{``thầy dạy dễ hiểu nhưng phòng
+học nóng quá''} chỉ nhận một cặp nhãn (\texttt{negative}, \texttt{lecturer}); khi tách câu tại từ \textit{nhưng}, hai
+mệnh đề được xếp đúng là (\texttt{positive}, \texttt{lecturer}) và (\texttt{negative}, \texttt{facility}).
+
+\section{Kết luận}
+
+Mô hình cuối cùng, embedding tiếng Việt kết hợp LinearSVC, đạt macro-F1 0.8011 với cảm xúc và 0.7522 với chủ đề trên tập
+test, cao hơn baseline Naive Bayes (0.5955 và 0.5440) và cao hơn mô hình Logistic Regression của bài báo gốc ở mọi lớp.
+Embedding tiếng Việt giúp ích rõ với nhãn cảm xúc (+6.2 điểm so với TF-IDF) nhưng gần như không thay đổi kết quả với nhãn
+chủ đề.
+
+\subsection*{Hạn chế}
+\begin{itemize}
+  \item Mỗi câu chỉ có một nhãn, nên câu vừa khen vừa chê không được biểu diễn đúng và là nguồn lỗi chính.
+  \item Lớp \texttt{neutral} và \texttt{others} vẫn yếu (F1 khoảng 0.53 và 0.46): hai lớp nhỏ, không có từ vựng riêng và
+        có một số nhãn mơ hồ.
+  \item Theo quy tắc gán nhãn, lời đề nghị được tính là \texttt{negative}, nên lớp này lẫn cả phàn nàn và góp ý.
+  \item Các bộ phân lớp dùng tham số mặc định, chưa được tinh chỉnh; embedding chỉ được dùng làm hàm trích đặc trưng.
+  \item Dữ liệu đến từ một trường đại học và đã được chuẩn hóa, nên kết quả với phản hồi kiểu mạng xã hội có thể thấp hơn.
+\end{itemize}
+
+\subsection*{Hướng mở rộng}
+Fine-tune trực tiếp mô hình embedding hoặc PhoBERT trên dữ liệu này; gán nhãn theo mệnh đề để xử
+lý câu trộn lẫn; thêm nhãn riêng cho lời góp ý; thu thập phản hồi từ khoa hoặc trường khác để kiểm tra khả năng tổng
+quát hóa.
+
+\begin{thebibliography}{9}
+\bibitem{text-vsfc} K. V. Nguyen, V. D. Nguyen, P. X. V. Nguyen, T. T. H. Truong, N. L.-T. Nguyen.
+  \textit{UIT-VSFC: Vietnamese Students' Feedback Corpus for Sentiment Analysis}. 10th International Conference on
+  Knowledge and Systems Engineering (KSE), 2018, tr. 19-24.
+\bibitem{text-emb} AITeamVN. \textit{Vietnamese\_Embedding}. Hugging Face, \url{https://huggingface.co/AITeamVN/Vietnamese_Embedding}.
+\end{thebibliography}
