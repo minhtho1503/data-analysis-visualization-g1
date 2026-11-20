@@ -1,431 +1,379 @@
-\chapter[Dự đoán giá xe máy cũ]{Dự đoán giá xe máy cũ ở TP.HCM và Hà Nội}
+\chapter[Dự đoán giá ô tô cũ]{Dự đoán giá ô tô cũ ở TP.HCM và Hà Nội}
+\setlength{\emergencystretch}{3em}
 
 \section{Bài toán và hướng tiếp cận}
 
-Người mua và người bán xe máy cũ thường không biết một chiếc xe ``đáng giá'' bao nhiêu: cùng là Honda Vision, xe đời
-2016 và đời 2023 chênh nhau vài lần, xe chạy 5 000 km khác xe chạy 80 000 km, và cùng một chiếc xe có thể được rao giá
-khác nhau ở hai thành phố. Bài tập này xây dựng mô hình ước lượng \textbf{giá rao bán} của một chiếc xe máy cũ từ các
-thông tin có trong tin đăng (hãng, dòng xe, đời xe, số km, nơi bán, người bán), đồng thời trả lời ba câu hỏi:
+Giá một chiếc ô tô cũ phụ thuộc vào nhiều thứ cùng lúc: dòng xe, đời xe, số km, phiên bản, nơi bán. Người mua khó biết
+một mức giá rao là hợp lý hay không, còn người bán khó biết nên rao bao nhiêu. Bài tập này xây dựng mô hình ước lượng
+\textbf{giá rao bán} của một chiếc ô tô đã qua sử dụng từ các thông tin có trong tin đăng, đồng thời trả lời ba câu hỏi:
 
 \begin{itemize}
-  \item Giá xe giảm bao nhiêu theo đời xe và số km?
-  \item Cùng một dòng xe, cùng đời, giá ở Hà Nội có khác TP.HCM không, và vì sao?
-  \item Dữ liệu tự thu thập có những lỗi gì, và cần xử lý chúng thế nào?
+  \item Tin rao tự thu thập thiếu những gì, thiếu vì sao, và nên điền như thế nào để có cơ sở?
+  \item Mỗi năm tuổi, một chiếc xe mất bao nhiêu phần trăm giá, và hãng nào giữ giá tốt nhất?
+  \item Khi cùng dòng xe và cùng đời, số km, thành phố và xuất xứ ảnh hưởng tới giá đến đâu?
 \end{itemize}
 
-Đây là bài toán \textbf{hồi quy có giám sát}. Quy trình gồm các bước: kiểm tra chất lượng dữ liệu và giới hạn bài toán
-vào các dòng xe phổ biến; chia train / validation / test; phân tích khám phá trên train; tạo feature, điền giá trị
-thiếu, mã hóa và chuẩn hóa trong một \texttt{Pipeline} của scikit-learn \cite{tab-sklearn}; so sánh hai baseline với năm
-mô hình hồi quy bằng cross-validation và validation; chấm trên tập test và phân tích lỗi. Notebook chạy được trên Google
-Colab với \textit{Runtime > Run all} trong khoảng một phút, không cần GPU.
+Đây là bài toán \textbf{hồi quy có giám sát}. Quy trình gồm: kiểm tra chất lượng dữ liệu, đặc biệt là giá trị thiếu;
+giới hạn bài toán vào xe đã qua sử dụng thuộc các dòng phổ biến; chia train / validation / test; phân tích khám phá trên
+train; tạo feature, điền giá trị thiếu, mã hóa và chuẩn hóa trong một \texttt{Pipeline} của scikit-learn
+\cite{tab-sklearn}; so sánh hai baseline với năm mô hình hồi quy; chấm trên tập test và phân tích lỗi. Notebook chạy
+được trên Google Colab với \textit{Runtime > Run all} trong khoảng một phút, không cần GPU.
 
 \section{Bộ dữ liệu}
 
 \begin{itemize}
-  \item \textbf{Nguồn:} chuyên mục \textit{Xe máy} của Chợ Tốt \cite{tab-chotot}, trang rao vặt lớn ở Việt Nam. Nhóm tự
-        thu thập bằng script \texttt{crawl\_chotot\_xemay.py} qua API công khai mà chính trang web dùng để hiển thị danh
-        sách tin, không cần đăng nhập.
-  \item \textbf{Cách thu thập:} API trả tối đa 50 tin mỗi trang và 10 000 tin mỗi truy vấn, nên script lấy lần lượt
-        từng quận/huyện của TP.HCM và Hà Nội, khoảng một request mỗi giây. Hãng, dòng xe, loại xe, xuất xứ và dung tích
-        được API trả về dạng mã số; script tra nhãn chữ của từng mã bằng API chi tiết của một tin có mã đó.
-  \item \textbf{Thời điểm:} thu thập ngày 16/11/2026. Mỗi dòng là một tin đang hiển thị lúc đó, đăng từ 17/09 đến
-        16/11/2026.
-  \item \textbf{Ẩn danh:} file CSV đã bỏ tên người bán, ID tài khoản, ảnh đại diện và phần mô tả tự do; số điện thoại
-        trong tiêu đề được thay bằng \texttt{[SĐT]}. Chỉ giữ các con số tổng hợp về người bán (số tin đang rao, số tin
-        đã bán, điểm đánh giá). Dữ liệu chỉ dùng cho mục đích học tập.
-  \item \textbf{Lưu ý về nhãn:} giá trong dữ liệu là giá rao do người bán tự đặt, không phải giá giao dịch thật.
+  \item \textbf{Nguồn:} chuyên mục \textit{Ô tô} của Chợ Tốt \cite{tab-chotot}. Nhóm tự thu thập qua API công khai mà
+        trang web dùng để hiển thị danh sách tin, không cần đăng nhập, khoảng một request mỗi giây. Script thu thập là
+        \texttt{crawl\_chotot\_oto.py}. Kiểu dáng, số ghế, xuất xứ, màu, hộp số, nhiên liệu được API trả về dạng mã
+        số; script tra nhãn chữ của mỗi mã bằng API chi tiết của một tin có mã đó.
+  \item \textbf{Phạm vi và thời điểm:} toàn bộ tin đang hiển thị ở TP.HCM và Hà Nội chiều 20/11/2026, gồm cả xe mới và
+        xe đã qua sử dụng; tin cũ nhất được đăng ngày 21/09/2026.
+  \item \textbf{Ẩn danh:} file CSV không chứa tên người bán, ID tài khoản, ảnh, phần mô tả tự do, địa chỉ, tọa độ và biển
+        số; số điện thoại và biển số trong tiêu đề được che. Về người bán chỉ giữ các con số tổng hợp. Dữ liệu chỉ dùng
+        cho mục đích học tập.
+  \item \textbf{Lưu ý về nhãn:} giá trong dữ liệu là giá rao do người bán tự đặt, không phải giá giao dịch.
 \end{itemize}
 
-Bộ dữ liệu có 19 718 tin (15 890 ở TP.HCM, 3 828 ở Hà Nội) và 28 cột, đáp ứng mọi yêu cầu của đề với dữ liệu dạng bảng
-(Bảng~\ref{tab:tab-req}). Bảng~\ref{tab:tab-cols} mô tả các nhóm cột.
-
-\begin{table}[H]\centering
-\caption{Bộ dữ liệu so với yêu cầu của đề (mục 4.2).}\label{tab:tab-req}
-\begin{tabular}{ll}
-\toprule
-Yêu cầu & Bộ dữ liệu \\
-\midrule
-Ít nhất 2 000 dòng & 19 718 dòng \\
-Ít nhất 10 cột & 28 cột \\
-Có giá trị thiếu & 13 cột có ô thiếu \\
-Có cột phân loại & 8 cột, ví dụ \texttt{model} có 403 mức \\
-Có cột số & 7 cột, ví dụ \texttt{mileage\_km}, \texttt{reg\_year} \\
-Có độ khó & giá lệch phải (skew 71.5), 7.1\% tin ngoài khoảng IQR \\
-\bottomrule
-\end{tabular}
-\end{table}
+Bộ dữ liệu có 12~237 tin (8~840 ở TP.HCM, 3~397 ở Hà Nội; 10~686 xe đã dùng, 1~551 xe mới) thuộc 69 hãng và 435 dòng
+xe, với 30 cột (Bảng~\ref{tab:tab-cols}), trong đó 13 cột có ô thiếu.
 
 \begin{table}[H]\centering
 \caption{Các nhóm cột của bộ dữ liệu.}\label{tab:tab-cols}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{6.2cm}>{\raggedright\arraybackslash}p{5.4cm}}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.4cm}>{\raggedright\arraybackslash}p{12cm}}
 \toprule
-Nhóm & Cột & Ý nghĩa \\
+Nhóm & Cột \\
 \midrule
-Mã và metadata & \texttt{list\_id}, \texttt{subject}, \texttt{posted\_at}, \texttt{orig\_posted\_at}, \texttt{crawled\_at} & mã tin, tiêu đề, ngày đăng, ngày thu thập \\
-Nơi bán & \texttt{city}, \texttt{district}, \texttt{ward}, \texttt{latitude}, \texttt{longitude} & thành phố, quận/huyện, phường/xã, tọa độ \\
-Chiếc xe & \texttt{brand}, \texttt{model}, \texttt{bike\_type}, \texttt{origin}, \texttt{capacity}, \texttt{reg\_year}, \texttt{mileage\_km}, \texttt{condition} & hãng, dòng xe, loại xe, xuất xứ, dung tích, năm đăng ký, số km, tình trạng \\
-Người bán & \texttt{seller\_is\_shop}, \texttt{seller\_live\_ads}, \texttt{seller\_sold\_ads}, \texttt{seller\_avg\_rating}, \texttt{seller\_total\_rating} & cửa hàng hay cá nhân, số tin đang rao, đã bán, điểm và số lượt đánh giá \\
-Tin đăng & \texttt{number\_of\_images}, \texttt{has\_video}, \texttt{inspected}, \texttt{is\_price\_not\_valid} & số ảnh, video, kiểm định, cờ giá không hợp lệ \\
-\textbf{Target} & \texttt{price\_vnd} & giá rao bán (VND) \\
+Tin đăng & \texttt{list\_id}, \texttt{subject}, \texttt{posted\_at}, \texttt{orig\_posted\_at}, \texttt{crawled\_at}, \texttt{number\_of\_images}, \texttt{has\_video}, \texttt{is\_price\_not\_valid} \\
+Nơi bán & \texttt{city}, \texttt{district} \\
+Chiếc xe & \texttt{brand}, \texttt{model}, \texttt{mfg\_year}, \texttt{body\_type}, \texttt{seats}, \texttt{gearbox}, \texttt{fuel}, \texttt{origin}, \texttt{color}, \texttt{condition}, \texttt{mileage\_km} \\
+Giấy tờ & \texttt{owners}, \texttt{has\_registration}, \texttt{has\_accessories} \\
+Người bán & \texttt{seller\_is\_shop}, \texttt{seller\_live\_ads}, \texttt{seller\_sold\_ads}, \texttt{seller\_avg\_rating}, \texttt{seller\_total\_rating} \\
+Target & \texttt{price\_vnd} (giá rao, VND) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\section{Kiểm tra chất lượng dữ liệu}
+\reportfig{fig01_categorical.png}{Phân phối các cột phân loại chính. Ba hãng nhiều tin nhất (Toyota, VinFast, Ford)
+chiếm 42\% số tin; 25\% tin không ghi kiểu dáng (thanh xám); 11\% là xe điện và 85\% là xe số tự động.}{fig:tab-cat}
 
-Dữ liệu rao vặt có nhiều lỗi do người đăng tự nhập. Các luật sửa lỗi ở mục này là luật cố định theo từng dòng, không
-học con số nào từ dữ liệu, nên được áp dụng trên toàn bảng trước khi chia tập mà không gây rò rỉ. Bảng~\ref{tab:tab-quality}
-tổng hợp kết quả.
+\section{Kiểm tra chất lượng dữ liệu}\label{sec:tab-quality}
+
+\subsection{Giá trị thiếu: ba kiểu thiếu khác nhau}
+
+Phần lớn công sức kiểm tra dành cho giá trị thiếu, vì cách điền chỉ có cơ sở khi biết dữ liệu thiếu theo kiểu nào.
+Dữ liệu có ba kiểu thiếu:
+
+\begin{enumerate}
+  \item \textbf{Thiếu vì không áp dụng.} Ở tin xe mới, số km, số đời chủ, đăng kiểm và phụ kiện trống gần như 100\% vì
+        form đăng xe mới không hỏi các mục này (Hình~\ref{fig:tab-miss}). Bài toán giới hạn ở xe đã dùng nên kiểu thiếu
+        này không cần điền.
+  \item \textbf{Thiếu ẩn.} 490 tin ghi số ghế \texttt{Khác}; 177 tin xe đã dùng khai 0 km và 479 tin khai dưới 1~000 km
+        dù xe đã từ 2 năm tuổi (một chiếc Lexus GX 460 đời 2010 khai 0 km); 55 tin khai trên 500~000 km với các số như
+        888~888, 999~999. Các giá trị này được đổi thành ô thiếu.
+  \item \textbf{Người bán bỏ trống.} Ở xe đã dùng: \texttt{owners} 50\%, \texttt{has\_accessories} 48\%,
+        \texttt{has\_registration} 44\%, \texttt{origin} 39\%, \texttt{body\_type} 25\%, \texttt{seats} 19\% (tính cả
+        giá trị \texttt{Khác}), \texttt{color} 6\%. Hãng, dòng xe, năm sản xuất, hộp số, nhiên liệu và giá không thiếu.
+\end{enumerate}
+
+\reportfig{fig03_missing_by_condition.png}{Tỉ lệ thiếu theo cột, tách theo tình trạng xe. Màu cam: các cột gần như luôn
+trống ở xe mới vì không áp dụng.}{fig:tab-miss}
+
+Để biết kiểu thứ ba có ngẫu nhiên không, nhóm làm ba kiểm tra trên xe đã dùng (Bảng~\ref{tab:tab-mar},
+Hình~\ref{fig:tab-misscorr}):
+
+\begin{itemize}
+  \item \textbf{Thiếu cùng nhau:} ba cột giấy tờ có cờ ``bị thiếu'' tương quan 0.73 -- 0.90 với nhau: người bán bỏ qua cả
+        nhóm mục một lúc. \texttt{body\_type} và \texttt{seats} tương quan 0.40.
+  \item \textbf{Ai bỏ trống:} người bán cá nhân bỏ trống nhiều hơn salon ở \texttt{body\_type}, \texttt{owners},
+        \texttt{has\_accessories} (chênh 10 -- 11 điểm \%); các cột khác chênh không quá 4 điểm \%.
+  \item \textbf{Thiếu và giá:} giá của mỗi tin được chia cho giá median của các tin cùng dòng xe và cùng năm sản xuất. Với
+        cả 7 cột, median của tỉ số này ở tin bị thiếu và tin đầy đủ đều bằng 1.00.
+\end{itemize}
 
 \begin{table}[H]\centering
-\caption{Các vấn đề chất lượng dữ liệu và cách xử lý.}\label{tab:tab-quality}
-\begin{tabular}{>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{5.2cm}>{\raggedright\arraybackslash}p{4.6cm}}
+\caption{Kiểm tra giá trị thiếu do người bán bỏ trống (xe đã dùng). Giá tương đối: giá chia cho median giá các tin cùng
+dòng xe và cùng năm sản xuất (nhóm từ 5 tin).}\label{tab:tab-mar}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+& & \multicolumn{2}{c}{\% thiếu theo người bán} & \multicolumn{2}{c}{Giá tương đối} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Cột & \% thiếu & salon & cá nhân & khi thiếu & khi có \\
+\midrule
+\texttt{body\_type} & 24.7 & 21.9 & 32.0 & 1.00 & 1.00 \\
+\texttt{seats} & 19.0 & 19.0 & 18.8 & 1.00 & 1.00 \\
+\texttt{origin} & 39.5 & 38.5 & 42.2 & 1.00 & 1.00 \\
+\texttt{color} & 5.9 & 6.2 & 5.1 & 1.00 & 1.00 \\
+\texttt{owners} & 50.4 & 47.6 & 57.9 & 1.00 & 1.00 \\
+\texttt{has\_registration} & 44.5 & 44.0 & 45.9 & 1.00 & 1.00 \\
+\texttt{has\_accessories} & 48.1 & 45.0 & 56.5 & 1.00 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\reportfig{fig04_missing_correlation.png}{Tương quan giữa các cờ ``bị thiếu''. Ba cột giấy tờ thiếu cùng nhau; các cặp
+khác tương quan yếu.}{fig:tab-misscorr}
+
+Kết luận: việc thiếu phụ thuộc vào người bán và cách họ điền form, tức vào những thứ quan sát được, chứ không phụ thuộc
+vào giá. Vì vậy có thể điền ô thiếu dựa trên các cột khác mà không làm lệch mô hình; cột nào điền được và điền bằng gì
+được kiểm tra bằng số ở Mục~\ref{sec:tab-impute}.
+
+\subsection{Các lỗi khác}
+
+Bảng~\ref{tab:tab-issues} tổng kết các vấn đề và cách xử lý. Đáng chú ý là lỗi giá: cờ \texttt{is\_price\_not\_valid}
+của Chợ Tốt không đánh dấu tin nào; 32 tin dưới 20 triệu phần lớn là tin dịch vụ, tin tìm mua hoặc giá gõ thiếu số (một
+chiếc Mazda CX-5 2015 rao 380~000 đồng); còn những lỗi khó thấy hơn, như tin rao tiền trả trước hoặc giá gấp nhiều lần
+xe cùng loại, chỉ lộ ra khi so với xe cùng dòng và đời gần nhau (Mục~\ref{sec:tab-eda}). Salon cũng hay đăng lại cùng
+một chiếc xe: 179 tin trùng được bỏ trước khi chia tập để không có cùng một chiếc xe nằm ở cả train và test.
+
+\begin{table}[H]\centering
+\caption{Các vấn đề dữ liệu và cách xử lý.}\label{tab:tab-issues}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{6.4cm}>{\raggedright\arraybackslash}p{4.6cm}}
 \toprule
 Vấn đề & Kết quả kiểm tra & Cách xử lý \\
 \midrule
-Giá trị thiếu & \texttt{origin} thiếu 56.1\%, \texttt{capacity} 43.4\% (gồm 132 giá trị ẩn \textit{Không biết rõ}, \textit{mã 0}), \texttt{mileage\_km} 1.2\% & điền trong pipeline (mục \ref{sec:tab-prep}) \\
-Cột hằng & \texttt{is\_price\_not\_valid}, \texttt{has\_video} chỉ có một giá trị; \texttt{inspected} cũng vậy, trừ 1 ô thiếu & bỏ cột \\
-Tọa độ ở mức phường & 1 243 cặp tọa độ cho 19 718 tin, gần bằng số phường (428) & bỏ tọa độ và phường, giữ quận \\
-Giá rác & 1 tin thiếu giá, 42 tin dưới 2 triệu, 2 tin trên 2 tỷ (một tin thu mua 8.9 tỷ, một chiếc Cub 6.5 tỷ) & bỏ tin \\
-Tin cần mua / thu mua & 32 tin, ví dụ ``MUA XE CŨ TẬN NHÀ GIÁ CAO'' & bỏ tin \\
-Năm đăng ký không thể & 3 tin trước 1980 hoặc sau năm đăng tin & bỏ tin \\
-Số km ``ảo'' & 2 093 tin xe đã dùng (10.8\%) khai 0, 1, 12 345, 99 999 km...; 168 tin trên 500 000 km & coi là thiếu, giữ tin \\
-Tin đăng lại & 518 tin (2.6\%) trùng thành phố, quận, hãng, dòng, năm, số km và giá & giữ bản đầu tiên \\
+Thiếu vì không áp dụng & xe mới không có số km, số đời chủ, giấy tờ & giới hạn ở xe đã dùng \\
+Thiếu ẩn & 490 tin số ghế \texttt{Khác}; 656 tin số km quá nhỏ so với tuổi xe; 55 tin trên 500~000 km & đổi thành ô thiếu \\
+Người bán bỏ trống & kiểu dáng, số ghế, xuất xứ, giấy tờ, màu, các cột người bán; không liên quan tới giá & điền theo dòng xe hoặc nhóm \texttt{không rõ}, kèm cột cờ \\
+Giá rác & 32 tin dưới 20 triệu & bỏ tin \\
+Giá vô lý so với xe cùng loại & tiền trả trước, giá gấp nhiều lần xe gần giống & bỏ theo ngưỡng học từ train \\
+Tin trùng & 179 tin đăng lại cùng một chiếc xe & bỏ, giữ tin mới nhất \\
+Năm trong tiêu đề khác \texttt{mfg\_year} & 1.3\% lệch hơn 1 năm & giữ \texttt{mfg\_year} \\
+Dòng xe hiếm, nhóm \texttt{Dòng khác} & 212 dòng có dưới 5 tin & giữ 85 dòng có từ 30 tin \\
+Giá lệch phải & skew trên 4 ở thang gốc & học trên $\log_{10}$(giá) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\reportfig{fig02_fake_km.png}{Mười lăm số km được khai nhiều nhất trong tin xe đã dùng. Màu cam là giá trị không thể
-có: 12 345 km xuất hiện 358 lần, nhiều hơn cả 12 000 km (352 lần). Các giá trị này được coi là thiếu chứ không phải số
-km thật.}{fig:tab-fakekm}
+\subsection{Phạm vi bài toán và chia tập}
 
-Ngưỡng trên 2 tỷ chứ không phải 1 tỷ vì hai tin đắt tiếp theo là Harley-Davidson CVO khoảng 1.5 tỷ, giá thật của dòng
-xe này. Có 54 tin ghi đúng năm 1980, nhiều hơn hẳn các năm 1981--1989, nhiều khả năng là lựa chọn ``1980 trở về trước''
-của trang, nên vẫn được giữ.
+Bài toán giới hạn ở \textbf{xe đã qua sử dụng}. Sau các luật làm sạch còn 10~479 tin thuộc 434 dòng xe, nhưng 212 dòng
+có dưới 5 tin. Nhóm giữ 85 dòng có từ 30 tin, phủ 77.9\% số tin; các nhóm \texttt{Dòng khác} (Chợ Tốt gom các dòng xe
+không có trong danh mục) không được giữ dù đủ số tin. Tập còn 8~161 tin, chia 70 / 15 / 15 phân tầng theo 10 khoảng giá:
+train 5~712, validation 1~224, test 1~225 tin. Mọi phân tích và thống kê sau đó chỉ dùng train; test chỉ được chấm một
+lần.
 
-\subsection{Phạm vi bài toán: các dòng xe phổ biến}
+\section{Phân tích khám phá dữ liệu}\label{sec:tab-eda}
 
-Sau khi làm sạch, dữ liệu có hơn 400 tổ hợp hãng + dòng xe, nhưng phần lớn chỉ có vài tin. Với dòng xe chỉ có 3--5
-tin, mô hình không có đủ ví dụ để học, và điểm trên test của dòng đó cũng không đáng tin. Vì vậy bài toán được giới hạn
-vào các dòng xe có \textbf{ít nhất 40 tin}; khi chia 70 / 15 / 15, mỗi dòng có khoảng 28 tin để học và 6 tin để chấm.
-Nhóm \texttt{Dòng khác} luôn nằm ngoài phạm vi vì là nhóm gộp của nhiều loại xe không rõ tên. Luật chỉ dựa trên số tin
-của mỗi dòng, không dựa trên giá của từng tin, và hàm dự đoán từ chối xe ngoài phạm vi.
+Giá ở thang gốc lệch phải mạnh (skew 4.2, median 495 triệu); sau khi lấy $\log_{10}$, phân phối gần đối xứng (skew
+$-0.29$), nên mô hình học trên $\log_{10}$(giá). Riêng dòng xe đã giải thích 58\% phương sai của log giá.
 
-\reportfig{fig03_scope.png}{Tỉ lệ tin được phủ theo số dòng xe. 65 dòng xe có từ 40 tin chiếm 82.8\% số tin; 343 dòng
-còn lại chỉ chiếm 11.6\% (trung bình 6.5 tin mỗi dòng), nhóm \texttt{Dòng khác} chiếm 5.6\%.}{fig:tab-scope}
+\textbf{Mỗi năm xe mất bao nhiêu giá?} So giá trực tiếp giữa các hãng sẽ bị lẫn với việc mỗi hãng bán những dòng xe khác
+nhau, nên với mỗi hãng nhóm ước lượng hồi quy $\log(\text{giá}) \sim \text{tuổi xe} + \text{dòng xe}$ trên xe 1 -- 12
+năm tuổi. Tính chung, giá giảm khoảng 8.9\% mỗi năm khi so trong cùng dòng xe; Mazda giữ giá tốt nhất (6.3\%/năm),
+Mercedes Benz mất giá nhanh nhất (13.2\%/năm), Toyota ở giữa (8.3\%/năm) (Hình~\ref{fig:tab-dep}).
 
-Bảng~\ref{tab:tab-funnel} cho biết số tin sau từng bước. Dữ liệu còn lại được chia 70 / 15 / 15 thành train (11 088
-tin), validation (2 376) và test (2 377), phân tầng theo thành phố và 10 khoảng giá để ba tập có cùng tỉ lệ Hà Nội
-(19\%) và cùng giá median (19.0 triệu). Tập được chia \textbf{trước} phân tích khám phá, để mọi quyết định sau đó chỉ dựa
-trên train.
+\reportfig{fig08_depreciation_by_brand.png}{Giá giảm mỗi năm tuổi khi so trong cùng dòng xe, theo hãng (hệ số tuổi xe
+của hồi quy log giá theo tuổi xe và dòng xe, xe 1 -- 12 năm tuổi). Đường nét đứt: 8.9\% tính chung.}{fig:tab-dep}
 
-\begin{table}[H]\centering
-\caption{Số tin sau từng bước làm sạch.}\label{tab:tab-funnel}
-\begin{tabular}{lrr}
-\toprule
-Bước & Số tin & Bị bỏ \\
-\midrule
-Dữ liệu thô & 19 718 & \\
-Bỏ giá rác, tin cần mua, năm không thể & 19 644 & 74 \\
-Bỏ tin đăng lại & 19 127 & 517 \\
-Giữ dòng xe phổ biến & 15 841 & 3 286 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\textbf{Số km, thành phố, xuất xứ.} Khi cố định dòng xe và đời xe, xe chạy dưới 5~000 km/năm được rao 1.02 lần giá
+median, xe chạy trên 30~000 km/năm 0.98 lần (Hình~\ref{fig:tab-km}). Giá ở Hà Nội bằng 0.993 lần TP.HCM (486 cặp dòng
+xe + đời), xe nhập khẩu bằng 0.995 lần xe lắp ráp trong nước (241 cặp), xe của salon bằng 1.011 lần xe của người bán cá
+nhân (509 cặp). Chênh lệch giá thô giữa các nhóm này chủ yếu đến từ việc mỗi nhóm bán những dòng xe và đời xe khác nhau.
 
-\section{Phân tích khám phá dữ liệu}
+\reportfig{fig09_km_effect.png}{Giá so với median của các tin cùng dòng xe và cùng đời, theo số km mỗi năm. Ảnh hưởng
+của số km chỉ vài phần trăm khi đã biết dòng xe và đời xe.}{fig:tab-km}
 
-Phân tích khám phá chỉ dùng tập train.
-
-\reportfig{fig04_target.png}{Phân phối giá rao trên thang gốc và thang log. Giá lệch phải mạnh (skew 3.3) nhưng gần đối
-xứng trên thang log (skew 0.03); giá median ở TP.HCM là 20.5 triệu, ở Hà Nội 14.5 triệu. Vì vậy mô hình học trên
-$\log_{10}$(giá), để sai 10\% ở xe rẻ và ở xe đắt được tính như nhau.}{fig:tab-target}
-
-\reportfig{fig05_price_by_model.png}{Giá theo 15 dòng xe nhiều tin nhất. Median của SH (68 triệu) gấp 9 lần Sirius (7.6
-triệu): dòng xe gần như quyết định mức giá.}{fig:tab-model}
-
-Train có 65 tổ hợp hãng + dòng xe và 50 quận/huyện, bằng hoặc vượt ngưỡng 50 mức mà bài EDA mẫu của môn học gợi ý dùng
-\textbf{target encoding} thay cho one-hot. Mục~\ref{sec:tab-enc} kiểm tra lựa chọn này bằng thí nghiệm.
-
-\reportfig{fig06_depreciation.png}{Giá median theo năm đăng ký (từ 2013) và theo số km của 4 dòng xe nhiều tin nhất. Mỗi
-năm đời xe cũ hơn, giá giảm khoảng 9\% với Air Blade, 7\% với SH, 5\% với Wave và 7\% với Vision. Xe đi trên 80 000 km
-còn 61\%, 64\%, 88\% và 74\% giá xe đi dưới 5 000 km (cùng thứ tự).}{fig:tab-dep}
-
-Giá giảm gần như đều theo năm trên thang log, còn theo số km thì giảm không đều vì số km đi cùng đời xe (xe cũ thường đi
-nhiều hơn). Vì vậy bước tiền xử lý thêm feature \textbf{tuổi xe} và \textbf{số km mỗi năm} để tách hai ảnh hưởng. Đường
-mất giá chỉ vẽ từ 2013 vì SH đăng ký năm 2010--2012 phần lớn là bản nhập khẩu từ Ý, đắt hơn bản lắp ráp sau đó, làm SH
-trông như ``không mất giá''.
-
-Để so sánh giá giữa hai thành phố một cách công bằng, mỗi tin được chia cho giá median của các tin TP.HCM cùng dòng xe
-và cùng năm đăng ký (chỉ dùng nhóm có ít nhất 5 tin TP.HCM). Tỉ số bằng 1 nghĩa là rao bằng giá TP.HCM.
-
-\reportfig{fig07_hanoi_vs_hcm.png}{Giá rao so với giá median TP.HCM cùng dòng xe và cùng đời. Người bán cá nhân ở Hà Nội
-rao bằng 0.90 lần giá TP.HCM, nhưng cửa hàng chỉ 0.62 lần, thấp nhất ở Quận Nam Từ Liêm (0.50 lần); quận này chiếm 32\%
-số tin Hà Nội. Ở TP.HCM, cá nhân và cửa hàng rao như nhau.}{fig:tab-city}
-
-Như vậy phần lớn chênh lệch giữa hai thành phố đến từ một nhóm cửa hàng ở Hà Nội rao giá rất thấp, không phải từ khác
-biệt chung của thị trường. Giá rao của nhóm này có thể không phải giá bán thật (ví dụ giá mồi để khách gọi điện), điều
-dữ liệu hiện có chưa kiểm chứng được. Mô hình cần biết thành phố, quận và loại người bán, nên giữ cả ba cột.
-
-Với các cột số, \texttt{reg\_year} tương quan với $\log$(giá) mạnh nhất (Spearman +0.44), tiếp theo là
-\texttt{number\_of\_images} (+0.32); không cột số nào vượt 0.5, nên phần lớn khác biệt về giá nằm ở dòng xe. Cặp cột số
-tương quan mạnh nhất là \texttt{seller\_total\_rating} và \texttt{seller\_live\_ads} (+0.52), chưa tới ngưỡng 0.7 của bài
-EDA mẫu, nên giữ mọi cột. Theo quy tắc IQR, 6.9\% giá ở thang gốc là outlier, nhưng đó là các xe phân khối lớn có thật;
-trên thang log chỉ còn 0.3\%. Vì vậy không bỏ tin nào theo IQR.
+\textbf{Outlier.} Theo quy tắc IQR, 4.6\% giá ở thang gốc là outlier, chỉ còn 3.7\% ở thang log; phần lớn là xe sang
+hoặc xe rất cũ có thật. Lỗi giá thật sự lộ ra khi so mỗi tin với các tin train cùng dòng xe, năm sản xuất chênh không quá
+2 năm: 7 tin rao gấp hơn 3 lần (một chiếc Ford Ranger 2019 rao 4~355 triệu trong khi tiêu đề ghi 435 triệu) và 31 tin
+dưới 30\% giá của những chiếc gần giống.
 
 \section{Tiền xử lý dữ liệu}\label{sec:tab-prep}
 
-Mọi thống kê học từ dữ liệu (ngưỡng giá, median để điền, mean và std để chuẩn hóa, giá trung bình theo dòng xe) chỉ được
-fit trên train rồi dùng lại cho validation và test. Các bước theo thứ tự:
+\begin{itemize}
+  \item \textbf{Bỏ tin có giá vô lý:} giá dưới 30\% hoặc trên 3 lần median giá của các tin train cùng dòng xe, năm sản
+        xuất chênh không quá 2 năm. Bỏ 38 tin ở train, 3 ở validation, 9 ở test.
+  \item \textbf{Tạo feature:} \texttt{age} (tuổi xe lúc thu thập), \texttt{log\_km}, \texttt{km\_per\_year} và bốn cờ từ
+        khóa trong tiêu đề (bản cao cấp, dẫn động 4x4, xe lướt, vay / trả góp).
+  \item \textbf{Điền giá trị thiếu} theo nguyên nhân thiếu của từng cột (Mục~\ref{sec:tab-impute}).
+  \item \textbf{Mã hóa và chuẩn hóa:} one-hot cho cột phân loại ít mức; target encoding \cite{tab-te} kèm one-hot cho
+        hãng, dòng xe và quận; \texttt{StandardScaler} cho cột số. Tất cả nằm trong một \texttt{ColumnTransformer} đặt đầu
+        \texttt{Pipeline}, nên mọi thống kê chỉ học từ train.
+\end{itemize}
 
-\begin{enumerate}
-  \item \textbf{Bỏ tin giá thấp vô lý:} tin có giá dưới 15\% giá median của dòng xe đó (median tính trên train, chỉ dùng
-        cho dòng có ít nhất 20 tin), thường là tiền trả trước hoặc tiền cọc, ví dụ một chiếc SH 2025 rao 10 triệu. Luật
-        bỏ 12 tin ở train, 2 ở validation và 3 ở test; còn lại 11 076 / 2 374 / 2 374 tin.
-  \item \textbf{Tạo feature} theo từng dòng (không học gì từ dữ liệu):
-  \begin{itemize}
-    \item \texttt{age} (tuổi xe khi đăng tin), \texttt{log\_km} và \texttt{km\_per\_year} sau khi coi số km ảo là thiếu.
-          Nhờ vậy 11.3\% số tin train bị coi là thiếu số km, trong khi cột gốc chỉ thiếu 0.7\%.
-    \item \texttt{cc\_est}: dung tích lấy từ tiêu đề (``Vision 110'', ``SH 150i''), nếu không có thì lấy giữa khoảng của
-          cột \texttt{capacity}. Tiêu đề cho dung tích ở 45.7\% số tin, nên \texttt{cc\_est} chỉ còn thiếu 30.7\% so
-          với 42.3\% của \texttt{capacity}.
-    \item \texttt{kw\_*}: tiêu đề có nhắc tới ABS, smartkey, ``zin'', ``lướt'', biển số đẹp, hàng nhập, xe độ hay trả
-          góp không.
-    \item \texttt{brand\_model} và \texttt{model\_cc} (hãng + dòng xe + dung tích), vì cùng tên ``SH'' có bản 125, 150
-          và 350 với giá rất khác nhau.
-  \end{itemize}
-  \item \textbf{Điền giá trị thiếu, mã hóa, chuẩn hóa} trong một \texttt{ColumnTransformer} đặt đầu \texttt{Pipeline}
-        của mỗi mô hình (Bảng~\ref{tab:tab-pipe}). Sau bước này, 27 feature gốc thành 167 cột.
-\end{enumerate}
+\subsection{Điền giá trị thiếu theo dòng xe}\label{sec:tab-impute}
 
-\begin{table}[H]\centering
-\caption{Xử lý từng nhóm cột trong \texttt{ColumnTransformer}.}\label{tab:tab-pipe}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{4.1cm}}
-\toprule
-Nhóm & Cột & Điền thiếu & Mã hóa / chuẩn hóa \\
-\midrule
-Số & \texttt{age}, \texttt{log\_km}, \texttt{km\_per\_year}, \texttt{cc\_est}, số ảnh, các cột người bán & median của train, kèm cột cờ ``bị thiếu'' & \texttt{StandardScaler} \\
-Phân loại ít mức & \texttt{city}, \texttt{bike\_type}, \texttt{origin}, \texttt{capacity}, \texttt{condition} & nhóm \texttt{không rõ} & one-hot, mức dưới 20 tin gộp thành ``hiếm'' \\
-Phân loại nhiều mức & \texttt{brand}, \texttt{brand\_model}, \texttt{model\_cc}, \texttt{district} & coi thiếu là một mức & \texttt{TargetEncoder} rồi \texttt{StandardScaler}, thêm one-hot cho \texttt{brand}, \texttt{brand\_model}, \texttt{district} (mức từ 5 tin) \\
-Cờ 0/1 & \texttt{seller\_is\_shop}, \texttt{kw\_*} & không thiếu & giữ nguyên \\
-\bottomrule
-\end{tabular}
-\end{table}
+Kiểu dáng, số ghế và xuất xứ gần như được quyết định bởi dòng xe (Toyota Innova là MPV 8 chỗ lắp ráp trong nước). Nhóm
+viết một transformer của scikit-learn, \texttt{GroupModeImputer}: \texttt{fit} học trên train bảng ``dòng xe $\to$ giá
+trị phổ biến nhất'', \texttt{transform} điền ô thiếu bằng giá trị của cùng dòng xe, nếu không có thì của cùng hãng, rồi
+của toàn bộ train. Mỗi cột được điền còn có thêm một cột cờ ``bị thiếu''.
 
-\textbf{Target encoding} \cite{tab-te} thay mỗi mức (ví dụ \texttt{Honda | SH}) bằng giá trung bình (thang log) của các
-xe thuộc mức đó trong train, có làm mượt: mức có ít tin bị kéo về gần giá trung bình chung. Vì dùng chính target, lớp
-\texttt{TargetEncoder} của scikit-learn dùng cross-fitting khi \texttt{fit\_transform} trên train: giá trị của mỗi dòng
-được tính từ 4/5 train còn lại, nên mô hình không ``thấy trước'' đáp án. Ví dụ, SH (998 tin) được mã hóa thành 65.1 triệu,
-gần median thật 68.0 triệu; Vision (831 tin) thành 18.8 triệu so với median 19.8 triệu.
+Cách điền được kiểm tra trực tiếp: trên train, giấu ngẫu nhiên 20\% số ô đang có giá trị của một cột, điền lại rồi so
+với giá trị thật, lặp 5 lần (Hình~\ref{fig:tab-impcheck}). Điền theo dòng xe đúng 90\% với \texttt{body\_type}, 91\% với
+\texttt{seats} và 67\% với \texttt{origin}, so với 42\%, 53\% và 53\% khi điền một giá trị chung. Với \texttt{color},
+\texttt{owners}, \texttt{has\_registration}, điền theo dòng xe không hơn điền chung. Tỉ lệ đúng cao của hai cột giấy tờ
+chỉ vì gần như mọi ô có giá trị đều là \texttt{1 chủ} và \texttt{Có}, trong khi ô trống ở đây có thể không ngẫu nhiên
+(người bán có xe nhiều đời chủ có lý do để bỏ qua). Vì vậy bốn cột màu và giấy tờ được giữ thành nhóm riêng
+\texttt{không rõ}. Các cột số (số km, các cột người bán) được điền bằng median của train kèm cột cờ.
 
-\reportfig{fig08_scaling.png}{Ba cột số trước và sau \texttt{StandardScaler} (fit trên train). Trước chuẩn hóa,
-\texttt{age} có mean 9.3, std 6.5 còn \texttt{seller\_live\_ads} có mean 40.0, std 81.3; sau chuẩn hóa cả ba có mean 0 và
-std 1. Hình dạng phân phối không đổi (\texttt{seller\_live\_ads} vẫn lệch phải), nên chuẩn hóa không thay cho việc lấy
-log.}{fig:tab-scale}
+\reportfig{fig12_imputation_check.png}{Điền lại các ô bị giấu trên train: tỉ lệ điền đúng giá trị thật khi điền một giá
+trị phổ biến nhất chung (xám) và giá trị phổ biến nhất của cùng dòng xe (xanh). Trung bình của 5 lần giấu.}{fig:tab-impcheck}
 
 \section{Xây dựng mô hình}
 
-\textbf{Thước đo chính} là $R^2$ trên $\log_{10}$(giá), đo sai số theo tỉ lệ chứ không theo số tiền. Kèm theo đó là các
-thước đo dễ hiểu: sai số tuyệt đối theo \% của giá thật, lấy trung vị trên các tin (\textit{sai số \% median}); tỉ lệ
-tin đoán lệch không quá 10\%; và MAE tính bằng triệu đồng. Mỗi mô hình được chấm bằng cross-validation 5 fold trên train
-(\texttt{KFold}, xáo trộn, seed 261), rồi huấn luyện lại trên toàn train và chấm trên validation. Mô hình có $R^2$
-validation cao nhất được chọn; hai mô hình chỉ được coi là khác nhau khi hiệu $R^2$ lớn hơn độ lệch giữa các fold.
+Thước đo chính là $R^2$ trên $\log_{10}$(giá), kèm sai số tuyệt đối theo \% giá thật lấy trung vị trên các tin
+(\textit{sai số \% median}), tỉ lệ tin đoán lệch không quá 10\% và MAE (triệu đồng). Mỗi mô hình được chấm bằng
+cross-validation 5 fold trên train rồi trên validation. Hai mô hình chỉ được coi là khác nhau khi hiệu $R^2$ validation
+lớn hơn độ lệch giữa các fold; nếu nhỏ hơn, chọn mô hình có sai số \% median thấp hơn.
 
-Hai baseline cho biết thế nào là ``đủ tốt'': \texttt{DummyRegressor} luôn đoán giá trung bình của train, và baseline thứ
-hai đoán giá median của dòng xe trên train, giống cách một người mua thường ước lượng (``SH cũ khoảng 60--70 triệu''). Các mô hình
-trong slide của môn học được so sánh trên cùng bộ tiền xử lý: hồi quy tuyến tính, kNN, cây quyết định, random forest
-\cite{tab-rf}. Gradient boosting (\texttt{HistGradientBoostingRegressor}, phần đọc thêm của slide cây và ensemble) được
-thêm như một mô hình mở rộng, thử ba cấu hình và giữ cấu hình tốt nhất theo validation (learning rate 0.03, 63 lá,
-1 500 vòng).
+Hai baseline là đoán giá trung bình của train và đoán giá median của các xe cùng dòng và cùng năm sản xuất (cách một
+người mua thường tra giá). Năm mô hình dùng chung bộ tiền xử lý: hồi quy tuyến tính, kNN, cây quyết định, random forest
+\cite{tab-rf} và gradient boosting (\texttt{HistGradientBoostingRegressor}). Bảng~\ref{tab:tab-val} là kết quả trên
+validation.
 
 \begin{table}[H]\centering
-\caption{Kết quả cross-validation trên train và trên validation.}\label{tab:tab-val}
+\caption{Kết quả trên validation (1~221 tin sau khi bỏ giá vô lý).}\label{tab:tab-val}
+\small
 \begin{tabular}{lrrr}
 \toprule
 Mô hình & $R^2$ CV (± độ lệch) & $R^2$ validation & Sai số \% median \\
 \midrule
-Baseline: giá trung bình & 0.000 ± 0.000 & 0.000 & 49.6\% \\
-Baseline: median theo dòng xe & 0.566 ± 0.016 & 0.579 & 30.0\% \\
-Hồi quy tuyến tính & 0.753 ± 0.012 & 0.749 & 21.3\% \\
-kNN ($k=10$) & 0.771 ± 0.011 & 0.768 & 19.7\% \\
-Cây quyết định (sâu 12) & 0.783 ± 0.014 & 0.788 & 15.4\% \\
-\textbf{Random forest} & \textbf{0.859 ± 0.011} & \textbf{0.858} & \textbf{12.1\%} \\
-Gradient boosting & 0.865 ± 0.008 & 0.856 & 13.2\% \\
+Baseline: giá trung bình & $-0.001$ ± 0.001 & 0.000 & 36.3\% \\
+Baseline: median cùng dòng xe và đời & 0.858 ± 0.009 & 0.820 & 6.6\% \\
+Hồi quy tuyến tính & 0.928 ± 0.004 & 0.923 & 8.0\% \\
+kNN ($k = 10$) & 0.791 ± 0.012 & 0.791 & 14.6\% \\
+Cây quyết định (sâu 12) & 0.919 ± 0.007 & 0.924 & 7.8\% \\
+\textbf{Random forest} & 0.946 ± 0.004 & \textbf{0.953} & \textbf{5.6\%} \\
+Gradient boosting & 0.949 ± 0.004 & 0.953 & 6.0\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Random forest và gradient boosting vượt xa các mô hình còn lại, nhưng thứ tự giữa hai mô hình không ổn định: trên
-cross-validation gradient boosting cao hơn 0.006, trên validation random forest cao hơn 0.002. Cả hai hiệu đều nhỏ hơn độ
-lệch giữa các fold (0.011 và 0.008), nên hai mô hình coi như ngang nhau. Theo quy tắc chọn bằng $R^2$ validation,
-\textbf{random forest} là mô hình cuối cùng.
+Random forest và gradient boosting cùng có $R^2$ validation 0.953, chênh nhau ít hơn độ lệch giữa các fold (0.004);
+random forest được chọn vì sai số \% median thấp hơn (5.6\% so với 6.0\%). Baseline median cùng dòng xe và đời đã khá
+mạnh (sai số 6.6\%): biết dòng xe và năm sản xuất là đoán được gần đúng giá. kNN kém nhất vì khoảng cách được tính trên
+hơn 200 cột sau one-hot. Khi thay đổi tham số, cây quyết định có khoảng cách giữa $R^2$ train và validation tăng từ
+0.008 (sâu 4) lên 0.043 (không giới hạn độ sâu), dấu hiệu học thuộc train; kNN tốt nhất ở $k = 5$; gradient boosting
+gần như đi ngang sau khoảng 400 vòng lặp.
 
-\reportfig{fig09_hyperparameters.png}{$R^2$ train và validation theo \texttt{max\_depth} của cây và $k$ của kNN. Cây càng
-sâu thì $R^2$ train càng tăng (0.905 khi không giới hạn), nhưng $R^2$ validation cao nhất là 0.789 ở \texttt{max\_depth}
-= 10 và giảm còn 0.774 khi không giới hạn: cây quá sâu bị overfitting. kNN đạt validation cao nhất 0.768 ở $k = 10$, vẫn
-kém random forest.}{fig:tab-hyper}
+\subsection{Cách điền giá trị thiếu ảnh hưởng tới mô hình ra sao?}\label{sec:tab-impeffect}
 
-\subsection{One-hot hay target encoding cho dòng xe?}\label{sec:tab-enc}
-
-Để kiểm tra lựa chọn mã hóa ở phần EDA, nhóm giữ nguyên mọi thứ khác và chỉ đổi cách mã hóa bốn cột nhiều mức: chỉ
-one-hot (mỗi mức từ 5 tin một cột), chỉ target encoding, hoặc cả hai (cách đang dùng).
+Random forest được huấn luyện theo ba cách xử lý \texttt{body\_type}, \texttt{seats}, \texttt{origin}: bỏ khỏi train mọi
+tin có ô thiếu; điền đơn giản (median cho số ghế, nhóm \texttt{không rõ} cho hai cột còn lại); điền theo dòng xe
+(Bảng~\ref{tab:tab-impeffect}, Hình~\ref{fig:tab-impeffect}).
 
 \begin{table}[H]\centering
-\caption{$R^2$ validation và sai số \% median theo cách mã hóa bốn cột nhiều mức.}\label{tab:tab-enc}
-\begin{tabular}{lrrr}
+\caption{Ba cách xử lý giá trị thiếu (random forest, chấm trên validation).}\label{tab:tab-impeffect}
+\begin{tabular}{lrrrrr}
 \toprule
-Cách mã hóa & Số cột & Hồi quy tuyến tính & Random forest \\
+& & \multicolumn{2}{c}{Toàn bộ validation} & \multicolumn{2}{c}{612 tin có ô thiếu} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Cách & Tin train & $R^2$ & Sai số \% & $R^2$ & Sai số \% \\
 \midrule
-One-hot & 368 & 0.750 (20.1\%) & 0.848 (12.3\%) \\
-Target encoding & 50 & 0.744 (23.0\%) & 0.856 (12.5\%) \\
-Cả hai & 167 & 0.749 (21.3\%) & \textbf{0.858 (12.1\%)} \\
+Bỏ tin có ô thiếu & 2~782 & 0.939 & 6.7\% & 0.935 & 7.6\% \\
+Điền đơn giản & 5~674 & 0.953 & 5.7\% & 0.954 & 6.3\% \\
+\textbf{Điền theo dòng xe} & 5~674 & \textbf{0.953} & \textbf{5.6\%} & \textbf{0.955} & \textbf{5.8\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\reportfig{fig10_encoding.png}{$R^2$ validation theo cách mã hóa. Với random forest, target encoding (0.856) tốt hơn
-one-hot (0.848) mà chỉ cần 50 cột thay vì 368; dùng cả hai cao nhất (0.858). Với hồi quy tuyến tính, ba cách gần như
-bằng nhau (0.744--0.750).}{fig:tab-enc}
+\reportfig{fig15_imputation_effect.png}{Sai số \% median trên validation theo cách xử lý giá trị thiếu: toàn bộ
+validation (trái) và 612 tin có ít nhất một ô thiếu (phải).}{fig:tab-impeffect}
 
-One-hot phải gộp các mức ít tin (dòng xe + dung tích hiếm, quận ít tin) vào một cột ``hiếm'', còn target encoding giữ
-được mức giá riêng của từng mức. Với hồi quy tuyến tính, one-hot nhỉnh nhất vì cho mỗi dòng xe một hệ số riêng. Nhóm giữ
-cách ``cả hai'' cho mọi mô hình vì cách này tốt nhất với mô hình mạnh nhất và chỉ kém one-hot 0.001 với hồi quy tuyến
-tính.
-
-\reportfig{fig11_model_comparison.png}{$R^2$ validation của các mô hình (cột) và $R^2$ cross-validation trên train (vạch
-đen, trung bình ± độ lệch giữa các fold). Random forest (0.858) và gradient boosting (0.856) chênh nhau ít hơn độ lệch
-giữa các fold. So với baseline median theo dòng xe, sai số \% median giảm từ 30.0\% xuống 12.1\%.}{fig:tab-models}
+Bỏ tin có ô thiếu làm mất 51\% train và cho sai số cao nhất. Hai cách điền gần như ngang nhau trên toàn bộ validation,
+vì dòng xe đã có sẵn trong mô hình qua \texttt{brand\_model}; khác biệt nằm ở các tin có ô thiếu, nơi điền theo dòng xe
+cho sai số 5.8\% so với 6.3\%. Nhóm giữ cách điền theo dòng xe: đúng hơn khi kiểm tra từng ô và tốt hơn ở các tin có ô
+thiếu.
 
 \section{Đánh giá trên tập test}
 
+Mọi mô hình được chấm một lần trên test (Bảng~\ref{tab:tab-test}). Random forest đạt $R^2$ 0.953, bằng validation
+(0.953) và gần cross-validation (0.946); một nửa số xe được đoán lệch không quá 5.5\% giá rao, so với 7.2\% nếu chỉ tra
+giá median của xe cùng dòng và đời. Gradient boosting có $R^2$ gần như bằng (0.952) nhưng sai số \% median cao hơn
+(6.3\%), nhất quán với kết luận ở validation.
+
 \begin{table}[H]\centering
-\caption{Kết quả trên tập test (2 374 tin), $R^2$ tính trên $\log_{10}$(giá). Hàng in đậm là mô hình cuối cùng, chọn
-theo $R^2$ validation.}\label{tab:tab-test}
+\caption{Kết quả trên test (1~216 tin), $R^2$ tính trên $\log_{10}$(giá). Hàng in đậm là mô hình cuối cùng, chọn theo
+validation.}\label{tab:tab-test}
+\small
 \begin{tabular}{lrrrr}
 \toprule
 Mô hình & $R^2$ & Sai số \% median & Lệch $\le$ 10\% & MAE (triệu) \\
 \midrule
-Baseline: giá trung bình & 0.000 & 49.6\% & 9.8\% & 15.75 \\
-Baseline: median theo dòng xe & 0.574 & 28.3\% & 19.1\% & 9.57 \\
-Hồi quy tuyến tính & 0.738 & 20.9\% & 26.4\% & 7.44 \\
-kNN ($k=10$) & 0.781 & 19.3\% & 28.2\% & 6.88 \\
-Cây quyết định (sâu 12) & 0.778 & 15.0\% & 36.4\% & 6.04 \\
-\textbf{Random forest} & \textbf{0.851} & \textbf{11.6\%} & \textbf{45.4\%} & \textbf{4.72} \\
-Gradient boosting & 0.853 & 12.7\% & 42.2\% & 4.98 \\
+Baseline: giá trung bình & 0.000 & 36.0\% & 14.2\% & 275.7 \\
+Baseline: median cùng dòng xe và đời & 0.847 & 7.2\% & 60.4\% & 74.7 \\
+Hồi quy tuyến tính & 0.932 & 7.9\% & 58.7\% & 72.4 \\
+kNN ($k = 10$) & 0.812 & 14.6\% & 36.8\% & 122.6 \\
+Cây quyết định (sâu 12) & 0.917 & 8.0\% & 56.9\% & 72.6 \\
+\textbf{Random forest} & \textbf{0.953} & \textbf{5.5\%} & \textbf{70.3\%} & \textbf{53.9} \\
+Gradient boosting & 0.952 & 6.3\% & 66.9\% & 58.4 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Random forest đạt $R^2$ 0.851 trên test, gần với validation (0.858) và cross-validation (0.859). Một nửa số xe được đoán
-lệch không quá 11.6\% giá rao, so với 28.3\% nếu chỉ tra giá median của dòng xe, tức sai số còn khoảng 40\%. Gradient
-boosting có $R^2$ test nhỉnh hơn (0.853) nhưng sai số \% median cao hơn (12.7\%), nhất quán với kết luận ``ngang nhau'' ở
-validation.
+\reportfig{fig17_pred_vs_true.png}{Giá dự đoán so với giá rao thật trên test (thang log). Dải xám: lệch không quá 20\%,
+chứa phần lớn số tin; các điểm của Hà Nội và TP.HCM nằm lẫn vào nhau.}{fig:tab-pred}
 
-\reportfig{fig12_pred_vs_true.png}{Giá dự đoán so với giá rao thật trên test (thang log). 68.7\% số tin được đoán lệch
-không quá 20\% (dải xám), ở mọi mức giá. Chỉ 217 tin (9.1\%) lệch quá 50\%; 71\% trong số đó là đoán cao hơn giá rao và
-45\% thuộc 20\% tin rẻ nhất.}{fig:tab-pred}
-
-\reportfig{fig13_feature_importance.png}{15 feature quan trọng nhất của random forest (các cột one-hot của cùng một
-feature được cộng lại). Thông tin ``đây là xe gì'' (dòng xe, hãng, dung tích, loại xe) chiếm 70.7\% độ quan trọng, đời
-xe và số km 14.3\%, nơi bán và người bán 9.9\%, khớp với phần EDA.}{fig:tab-imp}
+\reportfig{fig18_feature_importance.png}{Permutation importance trên test: $R^2$ giảm bao nhiêu khi xáo trộn từng cột đầu
+vào. Dòng xe (0.636) và tuổi xe (0.626) quan trọng hơn hẳn mọi cột khác.}{fig:tab-imp}
 
 \subsection{Mô hình sai ở đâu?}
 
-\begin{table}[H]\centering
-\caption{Sai số của random forest trên test theo mức giá và theo nơi bán, người bán. Cột cuối là trung vị của tỉ số giá
-dự đoán / giá thật; lớn hơn 1 nghĩa là mô hình thường đoán cao hơn giá rao.}\label{tab:tab-err}
-\begin{tabular}{lrrr}
-\toprule
-Nhóm & Số tin & Sai số \% median & Dự đoán / thật \\
-\midrule
-Giá 2--9 triệu & 483 & 19.7\% & 1.16 \\
-Giá 9--16 triệu & 478 & 14.6\% & 1.05 \\
-Giá 16--24 triệu & 463 & 10.2\% & 0.97 \\
-Giá 24--38 triệu & 475 & 9.0\% & 0.96 \\
-Giá 38--346 triệu & 475 & 7.6\% & 0.96 \\
-\midrule
-Hà Nội, cá nhân & 103 & 17.2\% & 0.97 \\
-Hà Nội, cửa hàng & 346 & 12.4\% & 1.02 \\
-TP.HCM, cá nhân & 527 & 15.6\% & 1.00 \\
-TP.HCM, cửa hàng & 1 398 & 9.9\% & 0.99 \\
-\bottomrule
-\end{tabular}
-\end{table}
+Sai số cao nhất ở 20\% xe rẻ nhất (dưới 305 triệu): 10.3\%, và mô hình thường đoán cao hơn giá rao (tỉ số dự đoán / thật
+1.04); ở 20\% xe đắt nhất mô hình hơi đoán thấp (0.97). Tin của salon dễ đoán hơn tin của người bán cá nhân ở cả hai
+thành phố (5.2\% và 5.5\% so với 6.7\% và 6.5\%). Các tin sai nhiều nhất là xe đời cũ giá thấp hoặc tin mà giá không
+phải giá xe, ví dụ một tin Hyundai Accent ghi ``đưa mình 185tr ra góp tiếp'', tức giá là phần tiền góp còn lại.
 
-Sai số giảm dần theo mức giá, từ 19.7\% ở 20\% tin rẻ nhất xuống 7.6\% ở 20\% tin đắt nhất. Ở nhóm rẻ nhất, mô hình
-thường đoán cao hơn giá rao (tỉ số 1.16): với xe vài triệu, chênh một hai triệu đã là nhiều phần trăm. Năm tin bị đoán sai
-nhiều nhất đều có giá rao 2--4.3 triệu nhưng được đoán 8--21 triệu, ví dụ một chiếc Honda Wave 2019 đi 332 km rao 2.5
-triệu. Đây nhiều khả năng là tiền cọc hoặc giá mồi mà luật bỏ giá thấp vô lý ở bước tiền xử lý không bắt được. Theo người bán, nhóm khó đoán nhất là cá nhân ở Hà Nội (17.2\%), nhưng tỉ số dự đoán / giá thật của cả bốn nhóm đều
-trong khoảng 0.97--1.02, nên mô hình không đoán lệch hẳn về một phía ở nhóm nào.
+\section{Dự đoán giá một chiếc xe}
 
-\section{Dự đoán giá xe mới}
-
-Hàm \texttt{predict\_price()} nhận thông tin như khi đăng một tin trên Chợ Tốt, đi qua đúng các bước tạo feature và
-pipeline của mô hình cuối cùng; cột nào không khai thì pipeline tự điền. Xe thuộc dòng ngoài phạm vi bị từ chối thay vì
-trả về một con số không đáng tin. Bảng~\ref{tab:tab-cases} thay đổi lần lượt từng thông tin của cùng một chiếc Honda
-Vision.
+Hàm \texttt{predict\_price()} nhận thông tin như khi đăng một tin trên Chợ Tốt và đi qua đúng pipeline của mô hình cuối
+cùng; xe thuộc dòng ngoài phạm vi bị từ chối. Bảng~\ref{tab:tab-pricing} thay đổi lần lượt từng thông tin của một chiếc
+Toyota Innova.
 
 \begin{table}[H]\centering
-\caption{Giá dự đoán khi thay đổi từng thông tin của một chiếc Honda Vision 2021, 20 000 km, người bán cá nhân ở Quận Gò
-Vấp.}\label{tab:tab-cases}
+\caption{Giá dự đoán khi thay đổi từng thông tin của một chiếc Toyota Innova 2019, 80~000 km, người bán cá nhân ở Quận
+Gò Vấp.}\label{tab:tab-pricing}
 \begin{tabular}{lr}
 \toprule
 Thay đổi & Giá dự đoán (triệu) \\
 \midrule
-Xe gốc & 24.5 \\
-Đời 2017 thay vì 2021 & 17.6 \\
-Đi 60 000 km thay vì 20 000 km & 21.7 \\
-Bán ở Hà Nội (Cầu Giấy), cá nhân & 22.2 \\
-Bán ở Hà Nội (Nam Từ Liêm), cửa hàng & 14.4 \\
-Honda SH 150i thay vì Vision & 73.8 \\
+Xe gốc & 373.2 \\
+Đời 2015 thay vì 2019 & 252.0 \\
+Đi 150~000 km thay vì 80~000 km & 375.9 \\
+Bán ở Hà Nội (Cầu Giấy) & 367.8 \\
+Do salon bán & 375.9 \\
+Không khai số ghế, kiểu dáng, xuất xứ & 373.0 \\
+Toyota Fortuner thay vì Innova & 561.3 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Đổi sang đời 2017 làm giá giảm 28\%, khoảng 8\% mỗi năm, gần với mức 7\% mỗi năm của Vision ở
-Hình~\ref{fig:tab-dep}. Bán qua cửa hàng ở Nam Từ Liêm cho giá thấp hẳn (khoảng 0.6 lần giá ở TP.HCM): mô hình đã học
-lại đúng hiện tượng ở Hình~\ref{fig:tab-city}. Đổi dòng xe sang SH thì giá tăng gấp ba, đúng như dòng xe là yếu tố quyết
-định.
+Lùi đời về 2015 làm giá giảm 32\%, khoảng 9\% mỗi năm, khớp với Hình~\ref{fig:tab-dep}. Số km, thành phố và loại người
+bán chỉ làm giá chênh khoảng 1\%, khớp với Hình~\ref{fig:tab-km}. Bỏ trống ba cột được điền theo dòng xe cho kết quả gần
+như y hệt, vì pipeline điền lại đúng các giá trị của Innova. Đổi sang Fortuner thì giá lên 561 triệu.
 
 \section{Kết luận}
 
-Trên 65 dòng xe phổ biến (82.8\% số tin sau khi làm sạch), random forest giải thích 85\% biến động của $\log$(giá) trên
-tập test và đoán một nửa số xe lệch không quá 11.6\% giá rao, so với 28.3\% của baseline tra giá median theo dòng xe.
-Gradient boosting đạt kết quả tương đương. Ba câu hỏi đặt ra được trả lời như sau:
-
-\begin{itemize}
-  \item \textbf{Lỗi của dữ liệu tự thu thập:} 74 tin giá rác hoặc tin cần mua, 517 tin đăng lại, 10.8\% tin xe đã dùng
-        khai số km ảo, 3 cột hằng và tọa độ chỉ ở mức phường.
-  \item \textbf{Mất giá:} khoảng 5--9\% mỗi năm đời xe với 4 dòng phổ biến nhất; xe đi trên 80 000 km còn 61--88\% giá
-        của xe đi dưới 5 000 km.
-  \item \textbf{Hà Nội so với TP.HCM:} cá nhân ở Hà Nội rao bằng 0.90 lần giá TP.HCM, cửa hàng chỉ 0.62 lần. Chênh lệch
-        chủ yếu đến từ một nhóm cửa hàng, không phải toàn thị trường.
-\end{itemize}
+Trên 85 dòng xe phổ biến (78\% số tin xe đã dùng sau khi làm sạch), random forest giải thích 95.3\% biến động của log
+giá trên tập test và đoán một nửa số xe lệch không quá 5.5\% giá rao, so với 7.2\% của cách tra giá median cùng dòng
+xe và đời. Giá trị thiếu trong tin rao tự thu thập có ba kiểu (không áp dụng, thiếu ẩn, người bán bỏ trống); kiểu thứ
+ba phụ thuộc vào người bán chứ không liên quan tới giá, nên có thể điền dựa trên các cột khác. Điền theo dòng xe đúng
+90 -- 91\% với kiểu dáng và số ghế, và cho sai số thấp nhất trên các tin có ô thiếu. Xe mất trung bình 8.9\% giá mỗi
+năm tuổi, từ 6.3\% (Mazda) tới 13.2\% (Mercedes Benz); số km, thành phố và xuất xứ chỉ làm giá chênh vài phần trăm khi
+đã biết dòng xe và đời xe.
 
 \subsection*{Hạn chế}
 \begin{itemize}
-  \item \textbf{Giá rao không phải giá bán.} Nhóm cửa hàng rao rất thấp ở Hà Nội và các tin rẻ bất thường ở test cho
-        thấy một phần giá rao có thể không phải giá giao dịch thật.
-  \item \textbf{Điểm test có thể hơi lạc quan.} Trước khi viết bản notebook cuối, nhóm đã thử vài phạm vi dữ liệu và vài
-        cách mã hóa, và có xem điểm test của các lần thử đó; quyết định giới hạn vào 65 dòng xe phổ biến được đưa ra sau
-        các lần thử này. Mức lạc quan có lẽ nhỏ, vì $R^2$ validation (0.858) và cross-validation (0.859) gần với test
-        (0.851).
-  \item \textbf{Luật bỏ giá thấp vô lý dùng nhãn:} 5 tin ở validation và test bị bỏ dựa trên chính giá rao của chúng.
-  \item \textbf{Thiếu thông tin tình trạng xe.} Trầy xước, máy móc, giấy tờ nằm trong ảnh và phần mô tả mà nhóm không thu
-        thập để bảo vệ thông tin cá nhân. Số km do người bán tự khai, 11\% số tin bị coi là thiếu số km.
-  \item \textbf{Một lần thu thập và chỉ 65 dòng xe.} Xe bán nhanh có thể đã bị gỡ trước ngày thu thập; các dòng hiếm
-        (11.6\% số tin) và \texttt{Dòng khác} (5.6\%) nằm ngoài phạm vi.
+  \item \textbf{Giá rao không phải giá bán}, và dữ liệu chỉ là một lần thu thập (20/11/2026): xe bán nhanh có thể đã bị
+        gỡ trước đó.
+  \item \textbf{Thiếu thông tin tình trạng xe.} Đâm đụng, ngập nước, bảo dưỡng nằm trong phần mô tả và ảnh mà nhóm không
+        thu thập để bảo vệ thông tin cá nhân; phiên bản xe chỉ được nhận ra qua vài từ khóa trong tiêu đề.
+  \item \textbf{Một nửa số tin không có thông tin giấy tờ}, nên mô hình gần như không học được ảnh hưởng của số đời chủ
+        và đăng kiểm.
+  \item \textbf{Chỉ áp dụng cho 85 dòng xe phổ biến}; dòng hiếm và các nhóm \texttt{Dòng khác} nằm ngoài phạm vi.
+  \item \textbf{Luật bỏ giá vô lý dùng nhãn:} 12 tin ở validation và test bị bỏ dựa trên chính giá rao của chúng.
+  \item \textbf{Năm sản xuất do người bán khai}; 1.3\% tiêu đề ghi năm lệch hơn 1 năm so với cột này.
 \end{itemize}
 
 \subsection*{Hướng mở rộng}
-Đưa phần mô tả tin vào mô hình bằng TF-IDF hoặc embedding tiếng Việt (như bài Text) và ảnh xe bằng mạng pretrained (như
-bài Image) để có thông tin về tình trạng xe; thu thập nhiều đợt để theo dõi giá theo thời gian và biết tin nào được gỡ
-sớm; dự đoán một khoảng giá thay vì một con số; tinh chỉnh tham số bằng \texttt{GridSearchCV} và mở rộng sang các tỉnh
-thành khác.
+Thu thập định kỳ để theo dõi giá theo thời gian; lấy phiên bản xe có cấu trúc từ trang chi tiết của tin thay cho từ khóa
+trong tiêu đề; trích tình trạng xe từ phần mô tả sau khi ẩn danh; dự đoán một khoảng giá (quantile regression) thay vì
+một con số.
 
 \begin{thebibliography}{9}
-\bibitem{tab-chotot} Chợ Tốt. \textit{Mua bán xe máy cũ}. \url{https://xe.chotot.com/mua-ban-xe-may}, truy cập ngày
-  16/11/2026.
+\bibitem{tab-chotot} Chợ Tốt. \textit{Mua bán ô tô cũ}. \url{https://xe.chotot.com/mua-ban-oto}, truy cập ngày
+  20/11/2026.
 \bibitem{tab-sklearn} F. Pedregosa và cộng sự. \textit{Scikit-learn: Machine Learning in Python}. Journal of Machine
   Learning Research, 12, 2011, tr. 2825--2830.
 \bibitem{tab-te} D. Micci-Barreca. \textit{A Preprocessing Scheme for High-Cardinality Categorical Attributes in
