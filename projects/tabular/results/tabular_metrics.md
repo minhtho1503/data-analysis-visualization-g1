@@ -1,26 +1,9 @@
-# Tabular (Chợ Tốt xe máy cũ): kết quả trên tập test
-
-Sinh ra bởi `tabular.ipynb`. Tập test: 2,374 tin. `final = True` là mô hình chọn theo R² validation. R2 tính trên log10(giá).
-
-## Các mô hình
-
-| model | final | val_R2 | test_R2 | test_median_APE_% | test_within_10_% | test_MAE_trieu |
-|---|---|---|---|---|---|---|
-| Baseline: giá trung bình | False | -0.0 | -0.0 | 49.6295 | 9.8147 | 15.7466 |
-| Baseline: median theo dòng xe | False | 0.579 | 0.5741 | 28.3019 | 19.0817 | 9.5696 |
-| Hồi quy tuyến tính | False | 0.7487 | 0.738 | 20.8565 | 26.369 | 7.4352 |
-| kNN (k=10) | False | 0.768 | 0.7813 | 19.299 | 28.1803 | 6.8756 |
-| Cây quyết định (sâu 12) | False | 0.788 | 0.7779 | 15.0133 | 36.3521 | 6.0388 |
-| Random forest | True | 0.8579 | 0.8515 | 11.5744 | 45.4086 | 4.7171 |
-| Gradient boosting | False | 0.8562 | 0.8532 | 12.6608 | 42.1651 | 4.9823 |
-
-## Thí nghiệm: one-hot so với target encoding (validation)
-
-| model | mã hóa | số cột | R2 | median_APE_% |
+| model | R² test | Sai số % median | Lệch ≤ 10% | MAE (triệu) |
 |---|---|---|---|---|
-| Hồi quy tuyến tính | one-hot | 368 | 0.7505 | 20.0948 |
-| Hồi quy tuyến tính | target encoding | 50 | 0.7439 | 22.9867 |
-| Hồi quy tuyến tính | cả hai | 167 | 0.7487 | 21.3201 |
-| Random forest | one-hot | 368 | 0.848 | 12.3396 |
-| Random forest | target encoding | 50 | 0.8559 | 12.4918 |
-| Random forest | cả hai | 167 | 0.8579 | 12.1333 |
+| Baseline: giá trung bình | -0.0 | 35.96 | 14.227 | 275.656 |
+| Baseline: median cùng dòng xe và đời | 0.847 | 7.208 | 60.444 | 74.671 |
+| Hồi quy tuyến tính | 0.932 | 7.914 | 58.717 | 72.406 |
+| kNN (k=10) | 0.812 | 14.595 | 36.842 | 122.583 |
+| Cây quyết định (sâu 12) | 0.917 | 7.999 | 56.908 | 72.615 |
+| Random forest (cuối cùng) | 0.953 | 5.545 | 70.312 | 53.904 |
+| Gradient boosting | 0.952 | 6.301 | 66.859 | 58.392 |
